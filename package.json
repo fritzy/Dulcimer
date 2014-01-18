@@ -1,0 +1,26 @@
+{
+  "name": "verymodel-level",
+  "version": "1.0.0",
+  "homepage": "https://github.com/fritzy/VeryModel",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:fritzy/verymodel-level.git"
+  },
+  "description": "Leveldb extensions for verymodel",
+  "dependencies": {
+    "validator": "~2.1.0",
+    "underscore": "*",
+    "verymodel": "~1.5.1",
+    "levelup": "~0.18.2",
+    "node-uuid": "~1.4.1",
+    "level": "~0.18.0"
+  },
+  "devDependencies": {
+    "nodeunit": "0.8.1",
+    "precommit-hook": "0.3.5"
+  },
+  "scripts": {
+    "test": "node_modules/nodeunit/bin/nodeunit tests/tests.js"
+  },
+  "main": "index.js"
+}

@@ -129,7 +129,7 @@ function makeModelLevely(mf) {
             var err;
             var stream = this.__verymeta.db.createReadStream({
                 start : this.key + '!' + factory.options.prefix,
-                end : this.__verymeta.prefix + '~'
+                end : this.key + '!' + factory.options.prefix + '~'
             });
             stream.on('data', function (entry) {
                 var inst = factory.create(entry.value);

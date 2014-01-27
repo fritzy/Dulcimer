@@ -13,6 +13,11 @@ var Person = new VeryLevelModel({
     twitter: {index: "twitter_index"}
 }, {db: db, prefix: 'person!'});
 
+var Thing = new VeryLevelModel({
+    manufacturer: {},
+    model: {}
+}, {db: db, prefix: 'thing!'});
+
 
 var gar = Person.create({
     first_name: 'Michael', 
@@ -26,6 +31,18 @@ gar.save(function (err) {
     Person.load(gar.key, function (err, person) {
         console.log(person.toJSON());
         console.log(person.key);
+    });
+    var thing = gar.createChild(Thing, {manufacturer: 'Acme', model: 'AABBCC'});
+    console.log(thing.key);
+    console.log(thing.toJSON());
+    thing.save(function (err) {
+        console.log("saved the thing!");
+        gar.getChildren(Thing, function (err, objs) {
+            objs.forEach(function (thing) {
+                console.log(thing.__verymeta.parent.full_name + "'s thing");
+                console.log(thing.toJSON());
+            });
+        });
     });
     Person.getByIndex('twitter', '@gar', function (err, person) {
         console.log("got twitter person");

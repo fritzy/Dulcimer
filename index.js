@@ -6,7 +6,11 @@ function makeModelLevely(mf) {
     mf.addDefinition({
         key: {private: true,
         default: function () {
-            return this.__verymeta.prefix + uuid.v4();
+            if (this.__verymeta.parent) {
+                return this.__verymeta.parent.key + '!' + this.__verymeta.prefix + uuid.v4();
+            } else {
+                return this.__verymeta.prefix + uuid.v4();
+            }
         },
         required: true},
     });
@@ -49,6 +53,7 @@ function makeModelLevely(mf) {
         });
     };
 
+
     mf.getByIndex = function (field, value, callback) {
         if (this.definition[field].hasOwnProperty('index')) {
             this.options.db.get(this.definition[field].index, function (err, index) {
@@ -80,7 +85,7 @@ function makeModelLevely(mf) {
                     this.__verymeta.db.put(this.key, this.toJSON(), acb);
                 }.bind(this),
                 function (acb) {
-                    Object.keys(this.__verymeta.defs).forEach(function (field) {
+                    async.each(Object.keys(this.__verymeta.defs), function (field, scb) {
                         var ikey;
                         if (this.__verymeta.defs[field].hasOwnProperty('index')) {
                             ikey = this.__verymeta.defs[field].index;
@@ -96,10 +101,15 @@ function makeModelLevely(mf) {
                                     }
                                 }
                                 obj[this[field]] = this.key;
-                                this.__verymeta.db.put(ikey, obj, acb);
+                                this.__verymeta.db.put(ikey, obj, scb);
                             }.bind(this));
+                        } else {
+                            scb();
                         }
-                    }.bind(this));
+                    }.bind(this),
+                    function (err) {
+                        acb(err);
+                    });
                 }.bind(this),
             ],
             function (err) {
@@ -109,6 +119,32 @@ function makeModelLevely(mf) {
         delete: function (callback) {
             this.__verymeta.db.del(this.key, callback);
         },
+        createChild: function (factory, obj) {
+            var clone = new VeryLevelModel(factory.definition, factory.options);
+            clone.options.parent = this;
+            return clone.create(obj);
+        },
+        getChildren: function (factory, callback) {
+            var objects = [];
+            var err;
+            var stream = this.__verymeta.db.createReadStream({
+                start : this.key + '!' + factory.options.prefix,
+                end : this.__verymeta.prefix + '~'
+            });
+            stream.on('data', function (entry) {
+                var inst = factory.create(entry.value);
+                inst.key = entry.key;
+                inst.__verymeta.parent = this;
+                objects.push(inst);
+            }.bind(this));
+            stream.on('error', function (error) {
+                err = error;
+                callback(err, null);
+            });
+            stream.on('close', function () {
+                callback(err, objects);
+            });
+        }
     });
     return mf;
 }

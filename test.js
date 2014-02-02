@@ -44,9 +44,9 @@ gar.save(function (err) {
             });
         });
     });
-    Person.getByIndex('twitter', '@gar', function (err, person) {
+    Person.getByIndex('twitter', '@gar', function (err, persons) {
         console.log("got twitter person");
-        console.log(person.toJSON());
+        console.log(persons[0].toJSON());
     });
 });
 

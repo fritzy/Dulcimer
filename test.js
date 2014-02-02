@@ -10,7 +10,7 @@ var Person = new VeryLevelModel({
     }, private: false},
     experience: {},
     title: {},
-    twitter: {index: "twitter_index"}
+    twitter: {index: true}
 }, {db: db, prefix: 'person!'});
 
 var Thing = new VeryLevelModel({

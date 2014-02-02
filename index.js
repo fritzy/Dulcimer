@@ -53,10 +53,14 @@ function makeModelLevely(mf) {
         });
     };
 
+    function indexName(field) {
+        return 'index!' + field;
+    }
+
 
     mf.getByIndex = function (field, value, callback) {
-        if (this.definition[field].hasOwnProperty('index')) {
-            this.options.db.get(this.definition[field].index, function (err, index) {
+        if (this.definition[field].hasOwnProperty('index') && this.definition[field].index === true) {
+            this.options.db.get(indexName(field), function (err, index) {
                 if (err || !index) index = {};
                 if (index.hasOwnProperty(value)) {
                     this.options.db.get(index[value], function (err, result) {
@@ -87,8 +91,8 @@ function makeModelLevely(mf) {
                 function (acb) {
                     async.each(Object.keys(this.__verymeta.defs), function (field, scb) {
                         var ikey;
-                        if (this.__verymeta.defs[field].hasOwnProperty('index')) {
-                            ikey = this.__verymeta.defs[field].index;
+                        if (this.__verymeta.defs[field].hasOwnProperty('index') && this.__verymeta.defs[field].index === true) {
+                            ikey = indexName(field);
                             this.__verymeta.db.get(ikey, function (err, obj) {
                                 var objkeys;
                                 if (err || !obj) {

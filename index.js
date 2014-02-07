@@ -32,6 +32,22 @@ function makeModelLevely(mf) {
         mf.options.db.del(key, callback);
     };
 
+    mf.update = function (key, updated_fields, callback) {
+        mf.load(key, function (err, result) {
+            if (!err && result) {
+                var keys = Object.keys(updated_fields);
+                for (var idx = 0; idx < keys.length; idx++) {
+                    result[keys[idx]] = updated_fields[keys[idx]];
+                }
+                result.save(function (err) {
+                    callback(err, result);
+                });
+            } else {
+                callback(err);
+            }
+        });
+    };
+
     mf.all = function (callback) {
         var objects = [];
         var err;
@@ -60,7 +76,7 @@ function makeModelLevely(mf) {
 
     mf.getByIndex = function (field, value, callback, _keyfilter) {
         if (this.definition[field].hasOwnProperty('index') && this.definition[field].index === true) {
-            this.options.db.get(indexName(field), function (err, index) {
+            mf.options.db.get(indexName(field), function (err, index) {
                 var keys;
                 if (err || !index) index = {};
                 if (index.hasOwnProperty(value)) {
@@ -71,7 +87,7 @@ function makeModelLevely(mf) {
                         });
                     }
                     async.map(keys, function (key, acb) {
-                        this.options.db.get(key, function (err, result) {
+                        mf.options.db.get(key, function (err, result) {
                             var obj;
                             if (!err) {
                                 obj = mf.create(result);

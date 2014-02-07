@@ -32,6 +32,13 @@ gar.save(function (err) {
         console.log(person.toJSON());
         console.log(person.key);
     });
+    Person.update(gar.key, {last_name: 'Joe'}, function (err) {
+        console.log('updated gar');
+        Person.load(gar.key, function (err, person) {
+            console.log("new gar");
+            console.log(person.toJSON());
+        });
+    });
     var thing = gar.createChild(Thing, {manufacturer: 'Acme', model: 'AABBCC'});
     console.log(thing.key);
     console.log(thing.toJSON());

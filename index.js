@@ -91,7 +91,7 @@ function makeModelLevely(mf) {
                             var obj;
                             if (!err) {
                                 obj = mf.create(result);
-                                obj.key = index[value];
+                                obj.key = key;
                                 acb(err, obj);
                             } else {
                                 acb(err);

@@ -74,7 +74,7 @@ function makeModelLevely(mf) {
     }
 
 
-    mf.getByIndex = function (field, value, callback, _keyfilter) {
+    mf.getByIndex = function (field, value, callback, _keyfilter, limit) {
         if (this.definition[field].hasOwnProperty('index') && this.definition[field].index === true) {
             mf.options.db.get(indexName(field), function (err, index) {
                 var keys;
@@ -85,6 +85,9 @@ function makeModelLevely(mf) {
                         keys = keys.filter(function (key) {
                             return key.indexOf(_keyfilter) === 0;
                         });
+                    }
+                    if (limit) {
+                        keys = keys.slice(0, limit);
                     }
                     async.map(keys, function (key, acb) {
                         mf.options.db.get(key, function (err, result) {
@@ -99,7 +102,11 @@ function makeModelLevely(mf) {
                         }.bind(this));
                     }.bind(this),
                     function (err, results) {
-                        callback(err, results);
+                        if (limit === 1) {
+                            callback(err, results[0]);
+                        } else {
+                            callback(err, results);
+                        }
                     });
                 } else {
                     callback("no index for value");
@@ -108,6 +115,10 @@ function makeModelLevely(mf) {
         } else {
             callback("field does not have index");
         }
+    };
+
+    mf.findByIndex = function (field, value, callback, _keyfilter) {
+        mf.getByIndex.call(this, field, value, callback, _keyfilter, 1);
     };
 
     mf.extendModel({

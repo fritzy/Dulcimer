@@ -11,7 +11,7 @@ var Person = new VeryLevelModel({
     experience: {},
     title: {},
     twitter: {index: true}
-}, {db: db, prefix: 'person!'});
+}, {db: db, prefix: 'person'});
 
 var Thing = new VeryLevelModel({
     manufacturer: {},
@@ -46,6 +46,7 @@ gar.save(function (err) {
         console.log("saved the thing!");
         gar.getChildren(Thing, function (err, objs) {
             objs.forEach(function (thing) {
+                console.log("children");
                 console.log(thing.__verymeta.parent.full_name + "'s thing");
                 console.log(thing.toJSON());
             });

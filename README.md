@@ -1,3 +1,80 @@
+#verymodel-level
+
+This module extends [VeryModel](https://github.com/fritzy/verymodel) as `VeryLevelModel` to add methods to model factories and instances for saving and loading in leveldb.
+
+Please refer to the [VeryModel documentation](https://github.com/fritzy/verymodel) to understand how models themselves behave.
+
+## Factory Methods
+
+###get
+
+`get(key, function (err, modelinstance) { ... })`
+
+Get an instance of the model by key.
+Including the prefix in the key is optional.
+
+###delete 
+`delete(key, function (err) { ... })`
+
+### update
+`update(key, { model values to update }, function (err, modelinstance) { ... })`
+
+### all
+`all(function(err, instances) { ... })`
+
+### getByIndex
+`getByIndex(indexed_field, value, function (err, instances) { ... }`
+
+### findByIndex
+`findByIndex(indexed_field, value, function (err, instance) { ... }`
+
+## Instance Methods
+
+###save
+`save(function(err) { ... })`
+
+###delete
+`delete(function (err) { ... })`
+
+###createChild
+`createChild(factory, { values }, function (err, instance) { ... })`
+
+###getChildren
+`getChildren(factory, function (err, instances) { ... })`
+
+###getChildrenByIndex
+`getChildrenByIndex(factory, indexed_field, value, function(err, instances) { ... })`
+
+## Attaching DB and Prefixes
+
+VeryModel factories have an `options` attribute.
+VeryLevelModel uses `options.db` and `options.prefix`. Both are required.
+    
+    var VeryLevelModel = require('verymodel-level');
+    var level = require('level');
+    var db = level('./somedb', {valueEncoding: 'json'});
+
+    var Person = new VeryLevelModel(def, {db: db, prefix: '!person'});
+
+or you can set `Person.options.db` and `Person.options.prefix` later.
+
+## Keys
+
+All VeryLevelModel instances have special fields: `key` & `keyname`.
+You may override keyname, otherwise it is a uuid.
+`key` is derived from `options.prefix`, `options.sep`, and `keyname`.
+
+key is:  
+`factory.options.prefix + (factory.options.sep ||  '!') + keyname`
+
+Child keys are prefixed by the parent's `key`
+`+ (factory.options.childsep || '~') + factory.options.prefix + (factory.options.sep || '~') + keyname`
+
+The prefix and seperators are used for `all()` and `getChildren()` and related functions..
+
+
+## 
+
     var VeryLevelModel = require('verymodel-level');
     var level = require('level');
     var db = level('./hi', {valueEncoding: 'json'});
@@ -10,7 +87,7 @@
             }, private: false},
         experience: {},
         title: {},
-    }, {db: db, prefix: 'person!'});
+    }, {db: db, prefix: 'person'});
 
 
     var gar = Person.create({

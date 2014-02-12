@@ -4,29 +4,42 @@ var async = require('async');
 
 function makeModelLevely(mf) {
     mf.addDefinition({
-        key: {private: true,
-        default: function () {
-            if (this.__verymeta.parent) {
-                return this.__verymeta.parent.key + '!' + this.__verymeta.prefix + uuid.v4();
-            } else {
-                return this.__verymeta.prefix + uuid.v4();
-            }
+        key: {
+            private: true,
+            derive: function () {
+                if (this.__verymeta.parent) {
+                    return this.__verymeta.parent.key + (this.__verymeta.childsep || '~') + this.__verymeta.prefix + this.keyname;
+                } else {
+                    return this.__verymeta.prefix + (this.__verymeta.sep || '!') + this.keyname;
+                }
+            },
+            required: true
         },
-        required: true},
+        keyname: {
+            private: true,
+            default: function () { return uuid.v4(); },
+            required: true
+        },
     });
 
-    mf.load = function (id, callback) {
-        mf.options.db.get(id, function (err, result) {
+    mf.load = function (key, callback) {
+        //if this isn't a child and the user didn't include the prefix, add it
+        if (key.indexOf(mf.options.childsep) === -1 && key.indexOf(mf.options.prefix) !== 0)  {
+            key = mf.options.prefix + (mf.options.sep || '!') + key;
+        }
+        mf.options.db.get(key, function (err, result) {
             var obj;
             if (!err) {
                 obj = mf.create(result);
-                obj.key = id;
+                obj.key = key;
                 callback(err, obj);
             } else {
                 callback(err);
             }
         });
     };
+    
+    mf.get = mf.load;
 
     mf.delete = function (key, callback) {
         mf.options.db.del(key, callback);
@@ -56,9 +69,11 @@ function makeModelLevely(mf) {
             end : mf.options.prefix + '~'
         });
         stream.on('data', function (entry) {
-            var inst = mf.create(entry.value);
-            inst.key = entry.key;
-            objects.push(inst);
+            if (entry.key.indexOf(mf.options.childsep || '~') == -1) {
+                var inst = mf.create(entry.value);
+                inst.key = entry.key;
+                objects.push(inst);
+            }
         });
         stream.on('error', function (error) {
             err = error;
@@ -173,14 +188,19 @@ function makeModelLevely(mf) {
             var objects = [];
             var err;
             var stream = this.__verymeta.db.createReadStream({
-                start : this.key + '!' + factory.options.prefix,
-                end : this.key + '!' + factory.options.prefix + '~'
+                start : this.key + (factory.options.childsep || '~') + factory.options.prefix,
+                end : this.key + (factory.options.childsep || '~') + factory.options.prefix + '~'
             });
             stream.on('data', function (entry) {
-                var inst = factory.create(entry.value);
-                inst.key = entry.key;
-                inst.__verymeta.parent = this;
-                objects.push(inst);
+                var segs = entry.key.split(factory.childsep || '~');
+                var inst;
+                //if the child is prefixed with this factory's prefix
+                if (segs[segs.length - 1].indexOf(factory.options.prefix) === 0) {
+                    inst = factory.create(entry.value);
+                    inst.key = entry.key;
+                    inst.__verymeta.parent = this;
+                    objects.push(inst);
+                }
             }.bind(this));
             stream.on('error', function (error) {
                 err = error;
@@ -191,7 +211,7 @@ function makeModelLevely(mf) {
             });
         },
         getChildrenByIndex: function (factory, field, value, callback) {
-            factory.getByIndex(field, value, callback, this.key + '!' + factory.options.prefix);
+            factory.getByIndex(field, value, callback, this.key + (factory.options.sep || '!') + factory.options.prefix);
         },
     });
     return mf;

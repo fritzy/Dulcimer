@@ -1,6 +1,7 @@
 var verymodel = require('verymodel');
 var uuid = require('node-uuid');
 var async = require('async');
+var crypto = require('crypto');
 
 function makeModelLevely(mf) {
     mf.addDefinition({
@@ -84,14 +85,15 @@ function makeModelLevely(mf) {
         });
     };
 
-    function indexName(field) {
-        return 'index!' + field;
+    function indexName(factory, field, value) {
+        var hash = crypto.createHash('md5').update(value).digest('hex');
+        return '__index__' + (factory.options.sep || '!') + factory.options.prefix + (factory.options.sep || '!') + field + (factory.options.sep || '!') + hash;
     }
 
 
     mf.getByIndex = function (field, value, callback, _keyfilter, limit) {
         if (this.definition[field].hasOwnProperty('index') && this.definition[field].index === true) {
-            mf.options.db.get(indexName(field), function (err, index) {
+            mf.options.db.get(indexName(mf, field, value), function (err, index) {
                 var keys;
                 if (err || !index) index = {};
                 if (index.hasOwnProperty(value)) {
@@ -146,7 +148,7 @@ function makeModelLevely(mf) {
                     async.each(Object.keys(this.__verymeta.defs), function (field, scb) {
                         var ikey;
                         if (this.__verymeta.defs[field].hasOwnProperty('index') && this.__verymeta.defs[field].index === true) {
-                            ikey = indexName(field);
+                            ikey = indexName(mf, field, this[field]);
                             this.__verymeta.db.get(ikey, function (err, obj) {
                                 var objkeys, idx, kidx;
                                 if (err || !obj) {
@@ -159,7 +161,7 @@ function makeModelLevely(mf) {
                                         obj[objkeys[kidx]].pop(idx);
                                     }
                                 }
-                                if (!obj.hasOwnProperty(field)) obj[this[field]] = [];
+                                if (!obj.hasOwnProperty(this[field])) obj[this[field]] = [];
                                 obj[this[field]].push(this.key);
                                 this.__verymeta.db.put(ikey, obj, scb);
                             }.bind(this));

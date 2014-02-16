@@ -131,7 +131,11 @@ function makeModelLevely(mf) {
                         }
                     });
                 } else {
-                    callback("no index for value", []);
+                    if (limit === 1) {
+                        callback("no index for value");
+                    } else {
+                        callback("no index for value", []);
+                    }
                 }
             }.bind(this));
         } else {

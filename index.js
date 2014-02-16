@@ -86,7 +86,7 @@ function makeModelLevely(mf) {
     };
 
     function indexName(factory, field, value) {
-        var hash = crypto.createHash('md5').update(value).digest('hex');
+        var hash = crypto.createHash('md5').update(String(value)).digest('hex');
         return '__index__' + (factory.options.sep || '!') + factory.options.prefix + (factory.options.sep || '!') + field + (factory.options.sep || '!') + hash;
     }
 

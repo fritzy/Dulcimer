@@ -131,11 +131,7 @@ function makeModelLevely(mf) {
                         }
                     });
                 } else {
-                    if (limit === 1) {
-                        callback("no index for value");
-                    } else {
-                        callback("no index for value", []);
-                    }
+                    callback("no index for value");
                 }
             }.bind(this));
         } else {
@@ -195,7 +191,9 @@ function makeModelLevely(mf) {
                                     obj = {};
                                 }
                                 if (!obj.hasOwnProperty(String(this[field]))) obj[this[field]] = [];
-                                obj[String(this[field])].push(this.key);
+                                if (obj[String(this[field])].indexOf(this.key) == -1) {
+                                    obj[String(this[field])].push(this.key);
+                                }
                                 this.__verymeta.db.put(ikey, obj, function (err) {
                                     if (this.__verymeta.old_data.hasOwnProperty(field) && this.__verymeta.old_data[field] != this[field]) {
                                         deleteFromIndex(mf, field, this.__verymeta.old_data[field], this.key, scb);

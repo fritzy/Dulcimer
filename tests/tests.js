@@ -40,6 +40,27 @@ module.exports = {
         var tm = TM.create({idx: 'crap'});
         test.notEqual(tm.key, 'TM!undefined');
         test.done();
+    },
+    'Delete old index': function (test) {
+        var TM = new VeryLevelModel({idx: {index: true}, name: {}}, {db: db, prefix: 'DOI'});
+        var tm = TM.create({'idx':  'ham', 'name': 'swiss'});
+        tm.save(function (err) {
+            test.ifError(err);
+            TM.getByIndex('idx', 'ham', function (err, tms) {
+                test.equals(tms.length, 1, 'Should have had one');
+                tm.idx = 'salami';
+                tm.save(function (err) {
+                    test.ifError(err);
+                    TM.getByIndex('idx', 'ham', function (err, tms) {
+                        test.equals(tms.length, 0);
+                        TM.getByIndex('idx', 'salami', function (err, tms) {
+                            test.equals(tms.length, 1);
+                            test.done();
+                        });
+                    });
+                });
+            });
+        });
     }
 };
 

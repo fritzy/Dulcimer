@@ -9,6 +9,7 @@ function makeModelLevely(mf) {
             private: true,
             derive: function () {
                 var value;
+                if (this.__verymeta.data.key) return this.__verymeta.data.key;
                 if (this.__verymeta.parent) {
                     value = this.__verymeta.parent.key + (this.__verymeta.childsep || '~') + this.__verymeta.prefix + (this.__verymeta.sep || '!');
                 } else {
@@ -130,7 +131,7 @@ function makeModelLevely(mf) {
                         }
                     });
                 } else {
-                    callback("no index for value");
+                    callback("no index for value", []);
                 }
             }.bind(this));
         } else {
@@ -141,6 +142,37 @@ function makeModelLevely(mf) {
     mf.findByIndex = function (field, value, callback, _keyfilter) {
         mf.getByIndex.call(this, field, value, callback, _keyfilter, 1);
     };
+
+    function deleteFromIndex(factory, field, value, key, callback) {
+        value = String(value);
+        var ikey = indexName(factory, field, value);
+        factory.options.db.get(ikey, function (err, obj) {
+            var idx, lidx;
+            if (!err && obj) {
+                idx = obj[value].indexOf(key);
+                if (idx !== -1) {
+                    obj[value].pop(idx);
+                    var foundvals = false;
+                    var keys = Object.keys(obj);
+                    for (lidx = 0; idx < keys.length; idx++) {
+                        if (obj[keys[lidx]].length > 0) {
+                            foundvals = true;
+                            break;
+                        }
+                    }
+                    if (foundvals) { 
+                        factory.options.db.put(ikey, obj, callback);
+                    } else {
+                        factory.options.db.del(ikey, callback);
+                    }
+                } else {
+                    callback();
+                }
+            } else {
+                callback();
+            }
+        });
+    }
 
     mf.extendModel({
         save: function (callback) {
@@ -158,16 +190,15 @@ function makeModelLevely(mf) {
                                 if (err || !obj) {
                                     obj = {};
                                 }
-                                objkeys = Object.keys(obj);
-                                for (kidx in objkeys) {
-                                    idx = obj[objkeys[kidx]].indexOf(this.key);
-                                    if (idx !== -1) {
-                                        obj[objkeys[kidx]].pop(idx);
+                                if (!obj.hasOwnProperty(String(this[field]))) obj[this[field]] = [];
+                                obj[String(this[field])].push(this.key);
+                                this.__verymeta.db.put(ikey, obj, function (err) {
+                                    if (this.__verymeta.old_data.hasOwnProperty(field) && this.__verymeta.old_data[field] != this[field]) {
+                                        deleteFromIndex(mf, field, this.__verymeta.old_data[field], this.key, scb);
+                                    } else {
+                                        scb(err);
                                     }
-                                }
-                                if (!obj.hasOwnProperty(this[field])) obj[this[field]] = [];
-                                obj[this[field]].push(this.key);
-                                this.__verymeta.db.put(ikey, obj, scb);
+                                }.bind(this));
                             }.bind(this));
                         } else {
                             scb();

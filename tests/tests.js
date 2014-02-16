@@ -131,4 +131,30 @@ module.exports = {
             });
         });
     },
+    "Deleting one index shouldn't delete all": function (test) {
+        var TM = new VeryLevelModel({idx: {}, name: {index: true}}, {db: db, prefix: 'ATM'});
+        var idx = 0;
+        async.whilst(
+            function () {
+                idx++;
+                return idx <= 10;
+            },
+            function (acb) {
+                var tm = TM.create({idx: idx, name: true});
+                tm.save(acb);
+            },
+            function (err) {
+                TM.getByIndex('name', true, function (err, tms) {
+                    test.equals(tms.length, 10);
+                    TM.update(tms[0].key, {name: false}, function (err, ntm) {
+                        TM.getByIndex('name', true, function (err, tms) {
+                            test.equals(tms[0].name, true);
+                            test.equals(tms.length, 9);
+                            test.done();
+                        });
+                    });
+                });
+            }
+        );
+    },
 };

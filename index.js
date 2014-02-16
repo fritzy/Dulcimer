@@ -151,10 +151,10 @@ function makeModelLevely(mf) {
             if (!err && obj) {
                 idx = obj[value].indexOf(key);
                 if (idx !== -1) {
-                    obj[value].pop(idx);
+                    obj[value].splice(idx, 1);
                     var foundvals = false;
                     var keys = Object.keys(obj);
-                    for (lidx = 0; idx < keys.length; idx++) {
+                    for (lidx = 0; lidx < keys.length; lidx++) {
                         if (obj[keys[lidx]].length > 0) {
                             foundvals = true;
                             break;

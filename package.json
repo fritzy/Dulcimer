@@ -20,6 +20,8 @@
     "nodeunit": "0.8.1",
     "precommit-hook": "0.3.5"
   },
-  "scripts": {},
+  "scripts": {
+    "test": "rm -rf tests/testdb && node_modules/nodeunit/bin/nodeunit tests/tests.js"
+  },
   "main": "index.js"
 }

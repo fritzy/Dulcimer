@@ -8,18 +8,22 @@ function makeModelLevely(mf) {
         key: {
             private: true,
             derive: function () {
+                var value;
                 if (this.__verymeta.parent) {
-                    return this.__verymeta.parent.key + (this.__verymeta.childsep || '~') + this.__verymeta.prefix + this.keyname;
+                    value = this.__verymeta.parent.key + (this.__verymeta.childsep || '~') + this.__verymeta.prefix + (this.__verymeta.sep || '!');
                 } else {
-                    return this.__verymeta.prefix + (this.__verymeta.sep || '!') + this.keyname;
+                    value = this.__verymeta.prefix + (this.__verymeta.sep || '!');
                 }
+                if (!this.keyname) {
+                    this.keyname = uuid.v4();
+                }
+                value += this.keyname;
+                return value;
             },
             required: true
         },
         keyname: {
-            private: true,
-            default: function () { return uuid.v4(); },
-            required: true
+            private: true
         },
     });
 

@@ -2,11 +2,11 @@ var verymodel = require('verymodel');
 var uuid = require('node-uuid');
 var async = require('async');
 var crypto = require('crypto');
+var base60 = require('base60');
 
 function makeModelLevely(mf) {
     mf.addDefinition({
         key: {
-            private: true,
             derive: function () {
                 var value;
                 if (this.__verymeta.data.key) return this.__verymeta.data.key;
@@ -16,12 +16,12 @@ function makeModelLevely(mf) {
                     value = this.__verymeta.prefix + (this.__verymeta.sep || '!');
                 }
                 if (!this.keyname) {
-                    this.keyname = uuid.v4();
+                    return '';
                 }
                 value += this.keyname;
                 return value;
             },
-            required: true
+            private: true,
         },
         keyname: {
             private: true
@@ -67,7 +67,14 @@ function makeModelLevely(mf) {
         });
     };
 
-    mf.all = function (callback) {
+    mf.all = function (opts, callback) {
+        if (typeof opts === 'function') {
+            callback = opts;
+            opts = {};
+        }
+        var count = 0;
+        var offset = opts.offset || 0;
+        var limit = opts.limit || -1;
         var objects = [];
         var err;
         var stream = mf.options.db.createReadStream({
@@ -76,9 +83,17 @@ function makeModelLevely(mf) {
         });
         stream.on('data', function (entry) {
             if (entry.key.indexOf(mf.options.childsep || '~') == -1) {
-                var inst = mf.create(entry.value);
-                inst.key = entry.key;
-                objects.push(inst);
+                if (offset === 0) {
+                    var inst = mf.create(entry.value);
+                    inst.key = entry.key;
+                    objects.push(inst);
+                    count++;
+                    if (limit !== -1 && count >= limit) {
+                        stream.destroy();
+                    }
+                } else {
+                    offset--;
+                }
             }
         });
         stream.on('error', function (error) {
@@ -175,9 +190,37 @@ function makeModelLevely(mf) {
     }
 
     mf.extendModel({
+        getNextKey: function (callback)  {
+            var nextkey;
+            if (typeof mf.options.lastkeyidx === 'undefined') {
+                mf.options.db.get("__counter__" + (mf.options.sep || '!') + mf.options.prefix, function (err, ctr) {
+                    mf.options.lastkeyidx = parseInt(ctr || 0, 10);
+                    this.getNextKey(callback);
+                }.bind(this));
+            } else {
+                mf.options.lastkeyidx++;
+                nextkey = base60.encode(mf.options.lastkeyidx);
+                nextkey = mf.options.prefix + (mf.options.sep || '!') + '00000000'.slice(0, 8 - nextkey.length) + nextkey;
+                if (this.__verymeta.parent) {
+                    nextkey = this.__verymeta.parent.key + (this.__verymeta.childsep || '~') + nextkey;
+                }
+                mf.options.db.put("__counter__" + (mf.options.sep || '!') + mf.options.prefix, mf.options.lastkeyidx, function (err) {
+                    callback(null, nextkey);
+                });
+            }
+        },
         save: function (callback) {
             async.waterfall([
                 function (acb) {
+                    if (this.key) {
+                        acb(null, this.key);
+                    } else {
+                        this.getNextKey(acb);
+                    }
+                }.bind(this),
+                function (key, acb) {
+                    //console.log(key)
+                    this.key = key;
                     this.__verymeta.db.put(this.key, this.toJSON(), acb);
                 }.bind(this),
                 function (acb) {
@@ -213,7 +256,10 @@ function makeModelLevely(mf) {
             ],
             function (err) {
                 callback(err);
-            });
+                if (typeof mf.options.onSave === 'function') {
+                    mf.options.onSave.call(this, this, this.getChanges());
+                }
+            }.bind(this));
         },
         delete: function (callback) {
             this.__verymeta.db.del(this.key, callback);

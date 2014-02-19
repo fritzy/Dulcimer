@@ -45,6 +45,33 @@ Including the prefix in the key is optional.
 ###getChildrenByIndex
 `getChildrenByIndex(factory, indexed_field, value, function(err, instances) { ... })`
 
+## Options
+
+The VeryLevelModel constructor takes field definitions and options objects. The options object may contain the following fields:
+
+* `db` the levelup instance
+* `prefix` the key prefix unique to this model factory in this database
+* `onSave` a function that is called when the model instance is saved
+
+### onSave
+
+    function (model_instance, diff) {
+    }
+
+The diff is an object of fields with 'then' and 'now' values.
+
+    {
+        field1: {then: 'cheese', now: 'ham'},
+        field2: {then: 'who', now: 'whom'}
+    }
+
+The diff may also contain 'key' if this is the first time this key has been saved.
+
+If you require a full model instance of what used to be, do this:
+
+    var oldmodel = model.getOldModel();
+
+
 ## Attaching DB and Prefixes
 
 VeryModel factories have an `options` attribute.
@@ -57,6 +84,7 @@ VeryLevelModel uses `options.db` and `options.prefix`. Both are required.
     var Person = new VeryLevelModel(def, {db: db, prefix: '!person'});
 
 or you can set `Person.options.db` and `Person.options.prefix` later.
+
 
 ## Keys
 

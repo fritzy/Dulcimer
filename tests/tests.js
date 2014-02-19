@@ -157,4 +157,44 @@ module.exports = {
             }
         );
     },
+    "Test offset and limit": function (test) {
+        var TM = new VeryLevelModel({idx: {}, name: {}}, {db: db, prefix: 'ARP'});
+        var idx = 0;
+        async.whilst(
+            function () {
+                idx++;
+                return idx <= 100;
+            },
+            function (acb) {
+                var tm = TM.create({idx: idx, name: 'billy' + idx});
+                tm.save(acb);
+            },
+            function (err) {
+                TM.all({limit: 10, offset: 10}, function (err, tms) {
+                    test.equals(tms[0].idx, 11);
+                    test.equals(tms.length, 10);
+                    test.equals(tms[9].idx, 20);
+                    test.done();
+                });
+            }
+        );
+    },
+    "onSave": function (test) {
+        var XR = new VeryLevelModel({
+            idx: {},
+            name: {}
+        }, {
+            db: db,
+            prefix: 'onsave',
+            onSave: function (model, diff) {
+                test.ok(diff.hasOwnProperty('name'));
+                test.ok(!diff.hasOwnProperty('idx'));
+                test.done();
+            }
+        });
+        var tm = XR.create({idx: 1, name: 'Billy'});
+        tm.name = 'Unbilly';
+        tm.save(function (err) {
+        });
+    },
 };

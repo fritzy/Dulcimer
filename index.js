@@ -262,7 +262,12 @@ function makeModelLevely(mf) {
             }.bind(this));
         },
         delete: function (callback) {
-            this.__verymeta.db.del(this.key, callback);
+            this.__verymeta.db.del(this.key, function (err) {
+                callback(err);
+                if (typeof mf.options.onDelete === 'function') {
+                    mf.options.onDelete.call(this, this);
+                }
+            });
         },
         createChild: function (factory, obj) {
             var clone = new VeryLevelModel(factory.definition, factory.options);

@@ -197,4 +197,21 @@ module.exports = {
         tm.save(function (err) {
         });
     },
+    "onDelete": function (test) {
+        var XR = new VeryLevelModel({
+            idx: {},
+            name: {}
+        }, {
+            db: db,
+            prefix: 'ondel',
+            onDelete: function (model) {
+                test.done();
+            }
+        });
+        var tm = XR.create({idx: 1, name: 'Billy'});
+        tm.save(function (err) {
+            tm.delete(function (err) {
+            });
+        });
+    },
 };

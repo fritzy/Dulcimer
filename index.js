@@ -73,7 +73,7 @@ function makeModelLevely(mf) {
                 for (var idx = 0; idx < keys.length; idx++) {
                     result[keys[idx]] = updated_fields[keys[idx]];
                 }
-                result.save(function (err) {
+                result.save({ctx: opts.ctx}, function (err) {
                     opts.cb(err, result);
                 });
             } else {

@@ -217,4 +217,18 @@ module.exports = {
             });
         });
     },
+    "get by child key": function (test) {
+        var TM = new VeryLevelModel({idx: {}}, {db: db, prefix: 'gbckp'});
+        var TMC = new VeryLevelModel({cidx: {}}, {db: db, prefix: 'childgbcp'});
+        var tm = TM.create({idx: 1});
+        tm.save(function (err) {
+            var tmc = tm.createChild(TMC, {cidx: 2});
+            tmc.save(function (err) {
+                TMC.get(tmc.key, function (err, result) {
+                    test.equals(result.cidx, 2);
+                    test.done();
+                });
+            });
+        });
+    },
 };

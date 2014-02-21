@@ -46,7 +46,7 @@ function makeModelLevely(mf) {
     mf.load = function (key, opts, callback) {
         //if this isn't a child and the user didn't include the prefix, add it
         opts = handleOpts('Factory.get', opts, callback);
-        if (key.indexOf(mf.options.childsep) === -1 && key.indexOf(mf.options.prefix) !== 0)  {
+        if ((key.indexOf(mf.options.childsep) === -1 && key.indexOf('~') === -1) && key.indexOf(mf.options.prefix) !== 0)  {
             key = mf.options.prefix + (mf.options.sep || '!') + key;
         }
         mf.options.db.get(key, function (err, result) {

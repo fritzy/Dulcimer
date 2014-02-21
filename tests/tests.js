@@ -186,16 +186,17 @@ module.exports = {
         }, {
             db: db,
             prefix: 'onsave',
-            onSave: function (model, diff, ctx) {
-                test.ok(diff.name.changed);
-                test.ok(!diff.idx.changed);
-                test.ok(ctx === 'hullo');
-                test.done();
+            onSave: function (err, opts, cb) {
+                test.ok(opts.changes.name.changed);
+                test.ok(!opts.changes.idx.changed);
+                test.ok(opts.ctx === 'hullo');
+                cb(err);
             }
         });
         var tm = XR.create({idx: 1, name: 'Billy'});
         tm.name = 'Unbilly';
         tm.save({ctx: 'hullo'}, function (err) {
+            test.done();
         });
     },
     "onDelete": function (test) {
@@ -205,13 +206,14 @@ module.exports = {
         }, {
             db: db,
             prefix: 'ondel',
-            onDelete: function (model) {
-                test.done();
+            onDelete: function (err, opts, cb) {
+                cb(err);
             }
         });
         var tm = XR.create({idx: 1, name: 'Billy'});
         tm.save(function (err) {
             tm.delete(function (err) {
+                test.done();
             });
         });
     },

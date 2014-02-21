@@ -28,7 +28,7 @@ function makeModelLevely(mf) {
         },
     });
     
-    function handleOpts(opts, callback) {
+    function handleOpts(name, opts, callback) {
         if (typeof callback === 'undefined') {
             opts = {cb: opts};
         } else {
@@ -37,12 +37,15 @@ function makeModelLevely(mf) {
         if (!opts.bucket) {
             opts.bucket = mf.options.bucket;
         }
+        if (typeof opts.cb !== 'function') {
+            throw Error('The last argument in ' + name + 'must be a function');
+        }
         return opts;
     }
 
     mf.load = function (key, opts, callback) {
         //if this isn't a child and the user didn't include the prefix, add it
-        opts = handleOpts(opts, callback);
+        opts = handleOpts('Factory.get', opts, callback);
         if (key.indexOf(mf.options.childsep) === -1 && key.indexOf(mf.options.prefix) !== 0)  {
             key = mf.options.prefix + (mf.options.sep || '!') + key;
         }
@@ -61,12 +64,12 @@ function makeModelLevely(mf) {
     mf.get = mf.load;
 
     mf.delete = function (key, opts, callback) {
-        opts = handleOpts(opts, callback);
+        opts = handleOpts('Factory.delete', opts, callback);
         mf.options.db.del(key, opts.cb);
     };
 
     mf.update = function (key, updated_fields, opts, callback) {
-        opts = handleOpts(opts, callback);
+        opts = handleOpts('Factory.update', opts, callback);
         mf.load(key, function (err, result) {
             if (!err && result) {
                 var keys = Object.keys(updated_fields);
@@ -83,7 +86,7 @@ function makeModelLevely(mf) {
     };
 
     mf.all = function (opts, callback) {
-        opts = handleOpts(opts, callback);
+        opts = handleOpts('Factory.all', opts, callback);
         var count = 0;
         var offset = opts.offset || 0;
         var limit = opts.limit || -1;
@@ -126,7 +129,7 @@ function makeModelLevely(mf) {
 
 
     mf.getByIndex = function (field, value, opts, callback) {
-        opts = handleOpts(opts, callback);
+        opts = handleOpts('Factory.getByIndex', opts, callback);
         if (this.definition[field].hasOwnProperty('index') && this.definition[field].index === true) {
             mf.options.db.get(indexName(mf, field, value), function (err, index) {
                 var keys;
@@ -170,7 +173,7 @@ function makeModelLevely(mf) {
     };
 
     mf.findByIndex = function (field, value, opts, callback) {
-        opts = handleOpts(opts, callback);
+        opts = handleOpts('Factory.findByIndex', opts, callback);
         mf.getByIndex.call(this, field, value, {keyfilter: opts.keyfilter, limit: 1}, opts.cb);
     };
 
@@ -226,7 +229,7 @@ function makeModelLevely(mf) {
             }
         },
         save: function (opts, callback) {
-            opts = handleOpts(opts, callback);
+            opts = handleOpts(mf.options.prefix + '.save', opts, callback);
             async.waterfall([
                 function (acb) {
                     if (this.key) {
@@ -272,18 +275,20 @@ function makeModelLevely(mf) {
                 }.bind(this),
             ],
             function (err) {
-                opts.cb(err);
                 if (typeof mf.options.onSave === 'function') {
-                    mf.options.onSave.call(this, this, this.getChanges(), opts.ctx);
+                    mf.options.onSave.call(this, err, {model: this, changes: this.getChanges(), ctx: opts.ctx}, opts.cb);
+                } else {
+                    opts.cb(err);
                 }
             }.bind(this));
         },
         delete: function (opts, callback) {
-            opts = handleOpts(opts, callback);
+            opts = handleOpts(mf.options.prefix + 'delete', opts, callback);
             this.__verymeta.db.del(this.key, function (err) {
-                opts.cb(err);
                 if (typeof mf.options.onDelete === 'function') {
-                    mf.options.onDelete.call(this, this, opts.ctx);
+                    mf.options.onDelete.call(this, err, {model: this, ctx: opts.ctx}, opts.cb);
+                } else {
+                    opts.cb(err);
                 }
             });
         },
@@ -293,7 +298,7 @@ function makeModelLevely(mf) {
             return clone.create(obj);
         },
         getChildren: function (factory, opts, callback) {
-            opts = handleOpts(opts, callback);
+            opts = handleOpts(mf.options.prefix + 'getChildren', opts, callback);
             var objects = [];
             var err;
             var stream = this.__verymeta.db.createReadStream({
@@ -319,7 +324,7 @@ function makeModelLevely(mf) {
             });
         },
         getChildrenByIndex: function (factory, field, value, opts, callback) {
-            opts = handleOpts(opts, callback);
+            opts = handleOpts(mf.options.prefix + 'getChildrenByIndex', opts, callback);
             factory.getByIndex(field, value, {keyfilter: this.key + (factory.options.sep || '!') + factory.options.prefix}, opts.cb);
         },
     });

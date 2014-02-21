@@ -187,8 +187,8 @@ module.exports = {
             db: db,
             prefix: 'onsave',
             onSave: function (model, diff, ctx) {
-                test.ok(diff.hasOwnProperty('name'));
-                test.ok(!diff.hasOwnProperty('idx'));
+                test.ok(diff.name.changed);
+                test.ok(!diff.idx.changed);
                 test.ok(ctx === 'hullo');
                 test.done();
             }

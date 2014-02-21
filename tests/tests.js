@@ -186,15 +186,16 @@ module.exports = {
         }, {
             db: db,
             prefix: 'onsave',
-            onSave: function (model, diff) {
+            onSave: function (model, diff, ctx) {
                 test.ok(diff.hasOwnProperty('name'));
                 test.ok(!diff.hasOwnProperty('idx'));
+                test.ok(ctx === 'hullo');
                 test.done();
             }
         });
         var tm = XR.create({idx: 1, name: 'Billy'});
         tm.name = 'Unbilly';
-        tm.save(function (err) {
+        tm.save({ctx: 'hullo'}, function (err) {
         });
     },
     "onDelete": function (test) {

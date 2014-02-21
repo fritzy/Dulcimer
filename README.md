@@ -31,7 +31,9 @@ Including the prefix in the key is optional.
 ## Instance Methods
 
 ###save
-`save(function(err) { ... })`
+`save(opts, function(err) { ... })`
+
+    opts: {ctx: 'context value to pass to onSave'}
 
 ###delete
 `delete(function (err) { ... })`
@@ -55,7 +57,7 @@ The VeryLevelModel constructor takes field definitions and options objects. The 
 
 ### onSave
 
-    function (model_instance, diff) {
+    function (model_instance, diff, ctx) {
     }
 
 The diff is an object of fields with 'then' and 'now' values.
@@ -70,6 +72,8 @@ The diff may also contain 'key' if this is the first time this key has been save
 If you require a full model instance of what used to be, do this:
 
     var oldmodel = model.getOldModel();
+
+The `ctx` argument is whatever you passed to `save({ctx: 'ctx goes here'}, function ...`
 
 
 ## Attaching DB and Prefixes

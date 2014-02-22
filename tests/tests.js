@@ -231,4 +231,92 @@ module.exports = {
             });
         });
     },
+    "boolean indexes": function (test) {
+        var TM = new VeryLevelModel({idx: {}, thingy: {index: true}}, {db: db, prefix: 'boolidx'});
+        var tm1 = TM.create({idx: 1, thingy: false});
+        tm1.save(function (err) {
+            var tm2 = TM.create({idx: 2, thingy: true});
+            tm2.save(function (err) {
+                TM.getByIndex('thingy', true, function (err, tms) {
+                    test.equals(tms.length, 1);
+                    test.equals(tms[0].idx, 2);
+                    TM.getByIndex('thingy', false, function (err, tms) {
+                        test.equals(tms.length, 1);
+                        test.equals(tms[0].idx, 1);
+                        test.done();
+                    });
+                });
+            });
+        });
+    },
+    "integer indexes": function (test) {
+        var TM = new VeryLevelModel({idx: {index_int: true}, thingy: {}}, {db: db, prefix: 'intidx'});
+        var tm = TM.create({idx: 3509835098567, thingy: 'Well hello there!'});
+        tm.save(function (err) {
+            TM.getByIndex('idx', 3509835098567, function (err, tms) {
+                test.equals(tms.length, 1);
+                test.equals(tms[0].idx, 3509835098567);
+                test.done();
+            });
+        });
+    },
+    "index string ordering": function (test) {
+        var TZ = new VeryLevelModel({idx: {}, name: {index: true}}, {db: db, prefix: 'idxorder'});
+        var cidx = 0;
+        async.each(['ham', 'cheese', 'zamboni', 'cow', 'nope', 'apple'],
+            function (name, acb) {
+                var tm = TZ.create({idx: cidx, name: name});
+                tm.save(function (err) {
+                    acb(err);
+                });
+            },
+            function (err) {
+                TZ.all({sortBy: 'name'}, function (err, children) {
+                    test.ifError(err);
+                    test.equals(children.length, 6);
+                    test.equals(children[0].name, 'apple');
+                    test.equals(children[1].name, 'cheese');
+                    test.equals(children[2].name, 'cow');
+                    test.equals(children[3].name, 'ham');
+                    test.equals(children[4].name, 'nope');
+                    test.equals(children[5].name, 'zamboni');
+                    test.done();
+                });
+            }
+        );
+    },
+    "index integer ordering": function (test) {
+        var TZ = new VeryLevelModel({idx: {index_int: true}}, {db: db, prefix: 'idxintorder'});
+        var cidx = 0;
+        async.each([24, 100, 1, 244, 24, 34563653, 50],
+            function (name, acb) {
+                var tm = TZ.create({idx: name});
+                tm.save(function (err) {
+                    acb(err);
+                });
+            },
+            function (err) {
+                TZ.allSortByIndex('idx', function (err, nums) {
+                    test.ifError(err);
+                    test.equals(nums.length, 7);
+                    test.equals(nums[0].idx, 1);
+                    test.equals(nums[1].idx, 24);
+                    test.equals(nums[2].idx, 24);
+                    test.equals(nums[3].idx, 50);
+                    test.equals(nums[4].idx, 100);
+                    test.equals(nums[5].idx, 244);
+                    test.equals(nums[6].idx, 34563653);
+                    TZ.allSortByIndex('idx', {offset: 2, limit: 3, reverse: true}, function (err, nums) {
+                        
+                        test.ifError(err);
+                        test.equals(nums.length, 3);
+                        test.equals(nums[0].idx, 24);
+                        test.equals(nums[1].idx, 50);
+                        test.equals(nums[2].idx, 100);
+                        test.done();
+                    });
+                });
+            }
+        );
+    },
 };

@@ -3,8 +3,12 @@ var uuid = require('node-uuid');
 var async = require('async');
 var crypto = require('crypto');
 var base60 = require('base60');
+var Padlock = require('padlock').Padlock;
 
 function makeModelLevely(mf) {
+
+    var savelock = new Padlock();
+
     mf.addDefinition({
         key: {
             derive: function () {
@@ -27,6 +31,22 @@ function makeModelLevely(mf) {
             private: true
         },
     });
+
+    function joinSep() {
+        var args = Array.prototype.slice.call(arguments);
+        return args.join(mf.options.sep || '!');
+    }
+
+    function joinChild() {
+        var args = Array.prototype.slice.call(arguments);
+        return args.join(mf.options.childsep || '~');
+    }
+
+    function getLastChildPrefix(key) {
+        var ksegs = key.split(mf.options.childsep || '~');
+        var csegs = ksegs[ksegs.length - 1].split(mf.options.sep || '!');
+        return csegs[0];
+    }
     
     function handleOpts(name, opts, callback) {
         if (typeof callback === 'undefined') {
@@ -46,8 +66,8 @@ function makeModelLevely(mf) {
     mf.load = function (key, opts, callback) {
         //if this isn't a child and the user didn't include the prefix, add it
         opts = handleOpts('Factory.get', opts, callback);
-        if ((key.indexOf(mf.options.childsep) === -1 && key.indexOf('~') === -1) && key.indexOf(mf.options.prefix) !== 0)  {
-            key = mf.options.prefix + (mf.options.sep || '!') + key;
+        if (getLastChildPrefix(key) !== this.options.prefix) {
+            key = joinSep(mf.options.prefix, key);
         }
         mf.options.db.get(key, function (err, result) {
             var obj;
@@ -87,6 +107,10 @@ function makeModelLevely(mf) {
 
     mf.all = function (opts, callback) {
         opts = handleOpts('Factory.all', opts, callback);
+        if (opts.hasOwnProperty('sortBy')) {
+            mf.allSortByIndex(opts.sortBy, opts, callback);
+            return;
+        }
         var count = 0;
         var offset = opts.offset || 0;
         var limit = opts.limit || -1;
@@ -94,7 +118,7 @@ function makeModelLevely(mf) {
         var err;
         var stream = mf.options.db.createReadStream({
             start : mf.options.prefix,
-            end : mf.options.prefix + '~'
+            end : mf.options.prefix + '~',
         });
         stream.on('data', function (entry) {
             if (entry.key.indexOf(mf.options.childsep || '~') == -1) {
@@ -115,23 +139,91 @@ function makeModelLevely(mf) {
             opts.cb(err, null);
         });
         stream.on('close', function () {
-            opts.cb(err, objects);
+            opts.cb(err, objects, {count: count, offset: opts.offset || 0, limit: opts.limit || -1});
         });
     };
 
-    function indexName(factory, field, value) {
-        value = String(value);
+    mf.allSortByIndex = function (index, opts, callback) {
+        opts = handleOpts('Factory.allSortByIndex', opts, callback);
+        var count = 0;
+        var offset = opts.offset || 0;
+        var limit = opts.limit || -1;
+        var objects = [];
+        
+        var stream = mf.options.db.createReadStream({
+            start: joinSep('__index__', mf.options.prefix, index, undefined),
+            end: joinSep('__index__', mf.options.prefix, index, '~'),
+        });
+        stream.on('data', function (entry) {
+            stream.pause();
+            var index = entry.value;
+            var keys = [];
+            var length;
+            var values = Object.keys(index).sort();
+            for (var vidx in values)  {
+                for (var kidx in index[values[vidx]]) {
+                    keys.push(index[values[vidx]][kidx]);
+                }
+            }
+            length = keys.length;
+            if (offset > 0) {
+                keys = keys.slice(offset);
+                offset -= length;
+                if (offset < 0) offset = 0;
+            }
+            if (limit !== -1 && count < limit && keys.length > 0) {
+                keys = keys.slice(0, limit - count);
+            }
+            if (keys.length > 0) {
+                async.each(keys,
+                    function (key, acb) {
+                        mf.get(key, function (err, inst) {
+                            if (!err || inst) {
+                                objects.push(inst);
+                            } else {
+                                objects.push(undefined);
+                            }
+                            count++;
+                            acb(null);
+                        });
+                    },
+                    function (err) {
+                        if (limit !== -1 && count >= limit) {
+                            stream.destroy();
+                        } else {
+                            stream.resume();
+                        }
+                    }
+                );
+            } else {
+                stream.resume();
+            }
+        });
+        stream.on('error', function (err) {
+            opts.cb(err, null);
+        });
+        stream.on('close', function () {
+            opts.cb(null, objects, {count: count, offset: opts.offset || 0, limit: opts.limit || -1});
+        });
+    };
+
+    function indexName(factory, field, value, is_int) {
+        if (!is_int) {
+            value = String(value).substring(0, 10).replace(/\s/g, "X");
+        } else {
+            value = base60.encode(value);
+            value = '0000000000'.slice(0, 10 - value.length) + value;
+        }
         var hash = crypto.createHash('md5').update(String(value)).digest('hex');
-        var trunk = value.substring(0, 10).replace(/\s/g, "X");
-        var result = '__index__' + (factory.options.sep || '!') + factory.options.prefix + (factory.options.sep || '!') + field + (factory.options.sep || '!') + trunk + (factory.options.sep || '!') + hash;
+        var result = joinSep('__index__', factory.options.prefix, field, value, hash);
         return result;
     }
 
 
     mf.getByIndex = function (field, value, opts, callback) {
         opts = handleOpts('Factory.getByIndex', opts, callback);
-        if (this.definition[field].hasOwnProperty('index') && this.definition[field].index === true) {
-            mf.options.db.get(indexName(mf, field, value), function (err, index) {
+        if (this.definition[field].index === true || this.definition[field].index_int === true) {
+            mf.options.db.get(indexName(mf, field, value, this.definition[field].index_int), function (err, index) {
                 var keys;
                 if (err || !index) index = {};
                 if (index.hasOwnProperty(value)) {
@@ -171,7 +263,7 @@ function makeModelLevely(mf) {
             opts.cb("field does not have index");
         }
     };
-
+    
     mf.findByIndex = function (field, value, opts, callback) {
         opts = handleOpts('Factory.findByIndex', opts, callback);
         mf.getByIndex.call(this, field, value, {keyfilter: opts.keyfilter, limit: 1}, opts.cb);
@@ -210,76 +302,75 @@ function makeModelLevely(mf) {
 
     mf.extendModel({
         getNextKey: function (callback)  {
-            var nextkey;
-            if (typeof mf.options.lastkeyidx === 'undefined') {
-                mf.options.db.get("__counter__" + (mf.options.sep || '!') + mf.options.prefix, function (err, ctr) {
-                    mf.options.lastkeyidx = parseInt(ctr || 0, 10);
-                    this.getNextKey(callback);
-                }.bind(this));
-            } else {
-                mf.options.lastkeyidx++;
-                nextkey = base60.encode(mf.options.lastkeyidx);
-                nextkey = mf.options.prefix + (mf.options.sep || '!') + '00000000'.slice(0, 8 - nextkey.length) + nextkey;
+            mf.options.db.get(joinSep('__counter__', mf.options.prefix), function (err, ctr) {
+                var value;
+                ctr = ctr || 0;
+                ctr++;
+                value = base60.encode(ctr);
+                value = '00000000'.slice(0, 8 - value.length) + value;
+                value = joinSep(mf.options.prefix, value);
                 if (this.__verymeta.parent) {
-                    nextkey = this.__verymeta.parent.key + (this.__verymeta.childsep || '~') + nextkey;
+                    value = joinChild(this.__verymeta.parent.key, value);
                 }
-                mf.options.db.put("__counter__" + (mf.options.sep || '!') + mf.options.prefix, mf.options.lastkeyidx, function (err) {
-                    callback(null, nextkey);
+                mf.options.db.put(joinSep('__counter__', mf.options.prefix), ctr, function (err) {
+                    callback(null, value);
                 });
-            }
+            }.bind(this));
         },
         save: function (opts, callback) {
-            opts = handleOpts(mf.options.prefix + '.save', opts, callback);
-            async.waterfall([
-                function (acb) {
-                    if (this.key) {
-                        acb(null, this.key);
-                    } else {
-                        this.getNextKey(acb);
-                    }
-                }.bind(this),
-                function (key, acb) {
-                    //console.log(key)
-                    this.key = key;
-                    this.__verymeta.db.put(this.key, this.toJSON(), acb);
-                }.bind(this),
-                function (acb) {
-                    async.each(Object.keys(this.__verymeta.defs), function (field, scb) {
-                        var ikey;
-                        if (this.__verymeta.defs[field].hasOwnProperty('index') && this.__verymeta.defs[field].index === true) {
-                            ikey = indexName(mf, field, this[field]);
-                            this.__verymeta.db.get(ikey, function (err, obj) {
-                                var objkeys, idx, kidx;
-                                if (err || !obj) {
-                                    obj = {};
-                                }
-                                if (!obj.hasOwnProperty(String(this[field]))) obj[this[field]] = [];
-                                if (obj[String(this[field])].indexOf(this.key) == -1) {
-                                    obj[String(this[field])].push(this.key);
-                                }
-                                this.__verymeta.db.put(ikey, obj, function (err) {
-                                    if (this.__verymeta.old_data.hasOwnProperty(field) && this.__verymeta.old_data[field] != this[field]) {
-                                        deleteFromIndex(mf, field, this.__verymeta.old_data[field], this.key, scb);
-                                    } else {
-                                        scb(err);
-                                    }
-                                }.bind(this));
-                            }.bind(this));
+            savelock.runwithlock(function () {
+                opts = handleOpts(mf.options.prefix + '.save', opts, callback);
+                async.waterfall([
+                    function (acb) {
+                        if (this.key) {
+                            acb(null, this.key);
                         } else {
-                            scb();
+                            this.getNextKey(acb);
                         }
                     }.bind(this),
-                    function (err) {
-                        acb(err);
-                    });
-                }.bind(this),
-            ],
-            function (err) {
-                if (typeof mf.options.onSave === 'function') {
-                    mf.options.onSave.call(this, err, {model: this, changes: this.getChanges(), ctx: opts.ctx}, opts.cb);
-                } else {
-                    opts.cb(err);
-                }
+                    function (key, acb) {
+                        this.key = key;
+                        this.__verymeta.db.put(this.key, this.toJSON(), acb);
+                    }.bind(this),
+                    function (acb) {
+                        async.each(Object.keys(this.__verymeta.defs), function (field, scb) {
+                            var ikey;
+                            if (this.__verymeta.defs[field].index === true || this.__verymeta.defs[field].index_int === true) {
+                                ikey = indexName(mf, field, this[field], this.__verymeta.defs[field].index_int);
+                                this.__verymeta.db.get(ikey, function (err, obj) {
+                                    var objkeys, idx, kidx;
+                                    if (err || !obj) {
+                                        obj = {};
+                                    }
+                                    if (!obj.hasOwnProperty(String(this[field]))) obj[this[field]] = [];
+                                    if (obj[String(this[field])].indexOf(this.key) == -1) {
+                                        obj[String(this[field])].push(this.key);
+                                    }
+                                    this.__verymeta.db.put(ikey, obj, function (err) {
+                                        if (this.__verymeta.old_data.hasOwnProperty(field) && this.__verymeta.old_data[field] != this[field]) {
+                                            deleteFromIndex(mf, field, this.__verymeta.old_data[field], this.key, scb);
+                                        } else {
+                                            scb(err);
+                                        }
+                                    }.bind(this));
+                                }.bind(this));
+                            } else {
+                                scb();
+                            }
+                        }.bind(this),
+                        function (err) {
+                            acb(err);
+                        });
+                    }.bind(this),
+                ],
+                function (err) {
+                    if (typeof mf.options.onSave === 'function') {
+                        mf.options.onSave.call(this, err, {model: this, changes: this.getChanges(), ctx: opts.ctx}, opts.cb);
+                    } else {
+                        opts.cb(err);
+                    }
+                    savelock.release();
+                }.bind(this));
             }.bind(this));
         },
         delete: function (opts, callback) {

@@ -20,7 +20,13 @@ Including the prefix in the key is optional.
 `update(key, { model values to update }, function (err, modelinstance) { ... })`
 
 ### all
-`all(function(err, instances) { ... })`
+`all(opts, function(err, instances) { ... })`
+
+    opts = {
+        offset: 0, //number of keys in to offset 
+        limit: -1, //max number of results (-1 for no limit)
+        sortBy: 'field' //indexed field to sort by
+    }
 
 ### getByIndex
 `getByIndex(indexed_field, value, function (err, instances) { ... }`
@@ -57,23 +63,33 @@ The VeryLevelModel constructor takes field definitions and options objects. The 
 
 ### onSave
 
-    function (model_instance, diff, ctx) {
+    function (err, {model, changes, ctx}, cb) {
     }
 
-The diff is an object of fields with 'then' and 'now' values.
+The changes is an object of fields with 'then', 'now', and 'changed', values.
 
     {
-        field1: {then: 'cheese', now: 'ham'},
-        field2: {then: 'who', now: 'whom'}
+        field1: {then: 'cheese', now: 'ham', changed: true},
+        field2: {then: 'who', now: 'whom', changed: true}
     }
 
-The diff may also contain 'key' if this is the first time this key has been saved.
 
 If you require a full model instance of what used to be, do this:
 
     var oldmodel = model.getOldModel();
 
 The `ctx` argument is whatever you passed to `save({ctx: 'ctx goes here'}, function ...`
+
+You must execute the callback as is the callback you passed save.
+
+### onDelete
+
+    function (err, {ctx}, cb) {
+    }
+
+The `ctx` argument is whatever you passed to `delete({ctx: 'ctx goes here'}, function ...`
+
+You must execute the callback as is the callback you passed delete.
 
 
 ## Attaching DB and Prefixes
@@ -103,6 +119,10 @@ Child keys are prefixed by the parent's `key`
 `+ (factory.options.childsep || '~') + factory.options.prefix + (factory.options.sep || '~') + keyname`
 
 The prefix and seperators are used for `all()` and `getChildren()` and related functions..
+
+## Indexes
+
+Indexes can be declared in a field definition with `index: true` or `index_int: true`.
 
 
 ## 

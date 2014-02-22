@@ -222,6 +222,9 @@ function makeModelLevely(mf) {
 
     mf.getByIndex = function (field, value, opts, callback) {
         opts = handleOpts('Factory.getByIndex', opts, callback);
+        var count = 0;
+        var offset = opts.offset || 0;
+        var limit = opts.limit || -1;
         if (this.definition[field].index === true || this.definition[field].index_int === true) {
             mf.options.db.get(indexName(mf, field, value, this.definition[field].index_int), function (err, index) {
                 var keys;
@@ -233,8 +236,11 @@ function makeModelLevely(mf) {
                             return key.indexOf(opts.keyfilter) === 0;
                         });
                     }
-                    if (opts.limit) {
-                        keys = keys.slice(0, opts.limit);
+                    if (offset > 0) {
+                        keys = keys.slice(offset);
+                    }
+                    if (limit !== -1) {
+                        keys = keys.slice(0, limit);
                     }
                     async.map(keys, function (key, acb) {
                         mf.options.db.get(key, function (err, result) {
@@ -249,7 +255,7 @@ function makeModelLevely(mf) {
                         }.bind(this));
                     }.bind(this),
                     function (err, results) {
-                        if (opts.limit === 1) {
+                        if (limit === 1) {
                             opts.cb(err, results[0]);
                         } else {
                             opts.cb(err, results);
@@ -390,6 +396,9 @@ function makeModelLevely(mf) {
         },
         getChildren: function (factory, opts, callback) {
             opts = handleOpts(mf.options.prefix + 'getChildren', opts, callback);
+            var count = 0;
+            var offset = opts.offset || 0;
+            var limit = opts.limit || -1;
             var objects = [];
             var err;
             var stream = this.__verymeta.db.createReadStream({
@@ -401,10 +410,18 @@ function makeModelLevely(mf) {
                 var inst;
                 //if the child is prefixed with this factory's prefix
                 if (segs[segs.length - 1].indexOf(factory.options.prefix) === 0) {
-                    inst = factory.create(entry.value);
-                    inst.key = entry.key;
-                    inst.__verymeta.parent = this;
-                    objects.push(inst);
+                    if (offset < 1) {
+                        inst = factory.create(entry.value);
+                        inst.key = entry.key;
+                        inst.__verymeta.parent = this;
+                        objects.push(inst);
+                        count++;
+                    } else {
+                        offset--;
+                    }
+                }
+                if (limit !== -1 && count >= limit) {
+                    stream.destroy();
                 }
             }.bind(this));
             stream.on('error', function (err) {

@@ -342,15 +342,16 @@ function makeModelLevely(mf) {
                         async.each(Object.keys(this.__verymeta.defs), function (field, scb) {
                             var ikey;
                             if (this.__verymeta.defs[field].index === true || this.__verymeta.defs[field].index_int === true) {
-                                ikey = indexName(mf, field, this[field], this.__verymeta.defs[field].index_int);
+                                var value = this[field];
+                                ikey = indexName(mf, field, value, this.__verymeta.defs[field].index_int);
                                 this.__verymeta.db.get(ikey, function (err, obj) {
                                     var objkeys, idx, kidx;
                                     if (err || !obj) {
                                         obj = {};
                                     }
-                                    if (!obj.hasOwnProperty(String(this[field]))) obj[this[field]] = [];
-                                    if (obj[String(this[field])].indexOf(this.key) == -1) {
-                                        obj[String(this[field])].push(this.key);
+                                    if (!obj.hasOwnProperty(String(value))) obj[value] = [];
+                                    if (obj[String(value)].indexOf(this.key) == -1) {
+                                        obj[String(value)].push(this.key);
                                     }
                                     this.__verymeta.db.put(ikey, obj, function (err) {
                                         if (this.__verymeta.old_data.hasOwnProperty(field) && this.__verymeta.old_data[field] != this[field]) {

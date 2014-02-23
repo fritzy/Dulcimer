@@ -319,4 +319,39 @@ module.exports = {
             }
         );
     },
+    "Saving Derived Fields": function (test) {
+        var TZ = new VeryLevelModel(
+        {
+            idx: {index_int: true},
+            thing1: {
+                type: 'boolean',
+            },
+            thing2: {},
+            thing3: {},
+            complete: {
+                derive: function () {
+                    return !!(this.thing1 && this.thing2 && this.thing3);
+                },
+                index: true,
+            },
+        },
+        {db: db, prefix: 'derivefield'});
+        var tz = TZ.create({idx: 1, thing1: true, thing2: "hi there", thing3: "yo"});
+        tz.save(function (err) {
+            TZ.getByIndex('complete', true, function (err, tzs) {
+                test.equals(tzs.length, 1);
+                tzs[0].thing2 = "";
+                tzs[0].save(function (err) {
+                    TZ.getByIndex('complete', false, function (err, tzs) {
+                        test.equals(tzs.length, 1);
+                        TZ.getByIndex('complete', true, function (err, tzs) {
+                            test.ok(!tzs);
+                            test.done();
+                        });
+                    });
+                });
+            });
+        });
+
+    },
 };

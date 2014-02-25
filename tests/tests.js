@@ -308,7 +308,6 @@ module.exports = {
                     test.equals(nums[5].idx, 244);
                     test.equals(nums[6].idx, 34563653);
                     TZ.allSortByIndex('idx', {offset: 2, limit: 3, reverse: true}, function (err, nums) {
-                        
                         test.ifError(err);
                         test.equals(nums.length, 3);
                         test.equals(nums[0].idx, 24);

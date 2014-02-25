@@ -157,61 +157,51 @@ function makeModelLevely(mf) {
         var offset = opts.offset || 0;
         var limit = opts.limit || -1;
         var objects = [];
+        var keys = [];
         
         var stream = mf.options.db.createReadStream({
             start: joinSep('__index__', mf.options.prefix, index, undefined),
             end: joinSep('__index__', mf.options.prefix, index, '~'),
         });
         stream.on('data', function (entry) {
-            stream.pause();
             var index = entry.value;
-            var keys = [];
-            var length;
             var values = Object.keys(index).sort();
             for (var vidx in values)  {
                 for (var kidx in index[values[vidx]]) {
                     keys.push(index[values[vidx]][kidx]);
                 }
             }
-            length = keys.length;
-            if (offset > 0) {
+            if (offset > 0 && offset > keys.length) {
+                offset -= keys.length;
+                keys = [];
+            } else if (offset > 0) {
                 keys = keys.slice(offset);
-                offset -= length;
-                if (offset < 0) offset = 0;
+                offset = 0;
             }
-            if (limit !== -1 && count < limit && keys.length > 0) {
-                keys = keys.slice(0, limit - count);
-            }
-            if (keys.length > 0) {
-                async.each(keys,
-                    function (key, acb) {
-                        mf.get(key, function (err, inst) {
-                            if (!err || inst) {
-                                objects.push(inst);
-                            } else {
-                                objects.push(undefined);
-                            }
-                            count++;
-                            acb(null);
-                        });
-                    },
-                    function (err) {
-                        if (limit !== -1 && count >= limit) {
-                            stream.destroy();
-                        } else {
-                            stream.resume();
-                        }
-                    }
-                );
-            } else {
-                stream.resume();
+            if (limit !== -1 && keys.length >= limit) {
+                keys = keys.slice(0, limit);
+                stream.destroy();
             }
         });
         stream.on('error', function (err) {
             opts.cb(err, null);
         });
         stream.on('close', function () {
-            opts.cb(null, objects, {count: count, offset: opts.offset || 0, limit: opts.limit || -1});
+            async.eachSeries(keys,
+                function (key, acb) {
+                    mf.get(key, function (err, inst) {
+                        if (!err || inst) {
+                            objects.push(inst);
+                        } else {
+                            objects.push(undefined);
+                        }
+                        acb(null);
+                    });
+                },
+                function (err) {
+                    opts.cb(null, objects, {count: count, offset: opts.offset || 0, limit: opts.limit || -1});
+                }
+            );
         });
     };
 

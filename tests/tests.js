@@ -2,6 +2,7 @@ var VeryLevelModel = require('../index.js');
 var level = require('level');
 var db = level(__dirname + '/testdb', {valueEncoding: 'json', errorIfExists: true});
 var async = require('async');
+var verymodel = require('verymodel');
 
 module.exports = {
     'Create multiple children': function (test) {
@@ -353,5 +354,16 @@ module.exports = {
             });
         });
 
+    },
+    "update doValidate": function (test) {
+        var TZ = new VeryLevelModel({idx: {}, email: {type: new verymodel.VeryType().isEmail()}}, {db: db, prefix: 'updatevalidate'});
+        var tz = TZ.create({idx: 1, email: 'userdoozer.com'});
+        tz.save(function (err) {
+            TZ.update(tz.key, {email: 'asdfsadham.org'}, {validate: true}, function (err, ntz) {
+                test.ok(Array.isArray(err) && err.length === 1);
+                test.ok(!ntz);
+                test.done();
+            });
+        });
     },
 };

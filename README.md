@@ -17,7 +17,10 @@ Including the prefix in the key is optional.
 `delete(key, function (err) { ... })`
 
 ### update
-`update(key, { model values to update }, function (err, modelinstance) { ... })`
+`update(key, { model values to update }, opts, function (err, modelinstance) { ... })`
+
+Opts: {validate: true} do validation of updated object before saving. Callback with errors rather than saving if validation fails.
+
 
 ### all
 `all(opts, function(err, instances) { ... })`

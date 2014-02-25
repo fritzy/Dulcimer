@@ -93,12 +93,20 @@ function makeModelLevely(mf) {
         mf.load(key, function (err, result) {
             if (!err && result) {
                 var keys = Object.keys(updated_fields);
+                var errors;
                 for (var idx = 0; idx < keys.length; idx++) {
                     result[keys[idx]] = updated_fields[keys[idx]];
                 }
-                result.save({ctx: opts.ctx}, function (err) {
-                    opts.cb(err, result);
-                });
+                if (opts.validate === true) {
+                    errors = result.doValidate();
+                }
+                if (typeof errors === 'undefined' ||  (Array.isArray(errors) && errors.length === 0) || !errors) {
+                    result.save({ctx: opts.ctx}, function (err) {
+                        opts.cb(err, result);
+                    });
+                } else {
+                    opts.cb(errors);
+                }
             } else {
                 opts.cb(err);
             }

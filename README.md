@@ -6,6 +6,20 @@ Please refer to the [VeryModel documentation](https://github.com/fritzy/verymode
 
 ## Factory Methods
 
+### bucket
+
+`bucket(bucketname)`
+
+Return a new Factory using this bucket.
+
+    Factory.bucket('something').get(...)
+
+The same as:
+
+    Factory.get('somekey', {bucket: 'something'}, function ...);
+
+Except that you could re-use it.
+
 ###get
 
 `get(key, function (err, modelinstance) { ... })`
@@ -29,23 +43,46 @@ Opts: {validate: true} do validation of updated object before saving. Callback w
         offset: 0, //number of keys in to offset 
         limit: -1, //max number of results (-1 for no limit)
         sortBy: 'field' //indexed field to sort by
+        bucket: override bucket
+        db: override levelup db connection
     }
 
 ### getByIndex
-`getByIndex(indexed_field, value, function (err, instances) { ... }`
+`getByIndex(indexed_field, value, opts, function (err, instances) { ... }`
+
+    opts = {
+        offset: 0, //number of keys in to offset 
+        limit: -1, //max number of results (-1 for no limit)
+        bucket: override bucket
+        db: override db
+    }
 
 ### findByIndex
-`findByIndex(indexed_field, value, function (err, instance) { ... }`
+`findByIndex(indexed_field, value, opts, function (err, instance) { ... }`
+    
+    opts = {
+        bucket: override bucket
+        db: override db
+    }
 
 ## Instance Methods
 
 ###save
 `save(opts, function(err) { ... })`
 
-    opts: {ctx: 'context value to pass to onSave'}
+    opts: {
+        ctx: 'context value to pass to onSave'
+        bucket: override bucket
+        db: override db
+    }
 
 ###delete
-`delete(function (err) { ... })`
+`delete(opts, function (err) { ... })`
+
+    opts = {
+        bucket: override bucket
+        db: override db
+    }
 
 ###createChild
 `createChild(factory, { values }, function (err, instance) { ... })`

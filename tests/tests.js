@@ -1,8 +1,13 @@
 var VeryLevelModel = require('../index.js');
 var level = require('level');
-var db = level(__dirname + '/testdb', {valueEncoding: 'json', errorIfExists: true});
+var db = level(__dirname + '/testdb.db', {valueEncoding: 'json', errorIfExists: true});
 var async = require('async');
 var verymodel = require('verymodel');
+
+process.on('uncaughtException', function (err) {
+    console.error(err.stack);
+    process.exit();
+});
 
 module.exports = {
     'Create multiple children': function (test) {
@@ -36,7 +41,7 @@ module.exports = {
         test.done();
 
     },
-    'Keyname is uuid': function (test) {
+    'Keyname is not undefined': function (test) {
         var TM = new VeryLevelModel({idx: {}}, {db: db, prefix: 'TM'});
         var tm = TM.create({idx: 'crap'});
         test.notEqual(tm.key, 'TM!undefined');
@@ -362,6 +367,30 @@ module.exports = {
                 test.ok(Array.isArray(err) && err.length === 1);
                 test.ok(!ntz);
                 test.done();
+            });
+        });
+    },
+    "Bucket function": function (test) {
+        var Thing = new VeryLevelModel({
+                testfield: {}
+            },
+            {
+                dbdir: __dirname,
+                prefix: 'thing'
+            });
+        var BucketThing = Thing.bucket('ham');
+
+        var x = BucketThing.create({testfield: 'beer'});
+        x.save(function (err) {
+            BucketThing.load(x.key, function (err, thing) {
+                test.ok(BucketThing.options.db.location.indexOf("ham.db", BucketThing.options.db.location.length - "ham.db".length) !== -1);
+                test.ok(Thing.options.db.location.indexOf("defaultbucket.db", Thing.options.db.location.length - "defaultbucket.db".length) !== -1);
+                test.equals(thing.testfield, 'beer');
+                Thing.load(x.key, {bucket: 'ham'}, function (err, thing2) {
+                    test.equals(thing2.testfield, 'beer');
+                    test.ok(Thing.options.db.location.indexOf("defaultbucket.db", Thing.options.db.location.length - "defaultbucket.db".length) !== -1);
+                    test.done();
+                });
             });
         });
     },

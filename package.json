@@ -9,21 +9,22 @@
   "description": "Leveldb extensions for verymodel",
   "dependencies": {
     "validator": "~2.1.0",
-    "underscore": "*",
+    "underscore": "^1.6.0",
     "verymodel": "~1.6.2",
-    "levelup": "~0.18.2",
+    "levelup": "^0.18.2",
     "node-uuid": "~1.4.1",
     "level": "~0.18.0",
     "async": "~0.2.10",
     "base60": "0.0.1",
-    "padlock": "~1.1.2"
+    "padlock": "~1.1.2",
+    "leveldown": "^0.10.2"
   },
   "devDependencies": {
     "nodeunit": "0.8.1",
     "precommit-hook": "0.3.5"
   },
   "scripts": {
-    "test": "rm -rf tests/testdb && node_modules/nodeunit/bin/nodeunit tests/tests.js && rm -rf tests/testdb"
+    "test": "rm -rf tests/*.db && node_modules/nodeunit/bin/nodeunit tests/tests.js && rm -rf tests/*.db"
   },
   "main": "index.js"
 }

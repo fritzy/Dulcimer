@@ -1,13 +1,39 @@
 var verymodel = require('verymodel');
 var uuid = require('node-uuid');
 var async = require('async');
-var crypto = require('crypto');
 var base60 = require('base60');
 var Padlock = require('padlock').Padlock;
+var keylib = require('./lib/keys');
+var underscore = require('underscore');
+var getDBPath = require('./lib/dbpool');
 
 function makeModelLevely(mf) {
 
     var savelock = new Padlock();
+
+    mf.getBucketDB = function (bucket) {
+        if (mf.options.dbdir.substr(-1) !== '/') {
+            mf.options.dbdir += '/';
+        }
+        return getDBPath(mf.options.dbdir + bucket + '.db');
+    };
+
+    if (mf.options.dbdir) {
+        mf.options.db = mf.getBucketDB(mf.options.bucket || 'defaultbucket');
+    }
+
+    if (typeof mf.options.prefix !== 'string') {
+        throw new Error("Model factories must include a prefix option.");
+    }
+
+    if (!mf.options.db) {
+        throw new Error("Model factories must include a db option of a levelup instance with valueEncoding of json.");
+    }
+
+    if (mf.options.db.options.valueEncoding != 'json') {
+        throw new Error("The levelup db must have valueEncoding set as json.");
+    }
+
 
     mf.addDefinition({
         key: {
@@ -32,21 +58,11 @@ function makeModelLevely(mf) {
         },
     });
 
-    function joinSep() {
-        var args = Array.prototype.slice.call(arguments);
-        return args.join(mf.options.sep || '!');
-    }
-
-    function joinChild() {
-        var args = Array.prototype.slice.call(arguments);
-        return args.join(mf.options.childsep || '~');
-    }
-
-    function getLastChildPrefix(key) {
-        var ksegs = key.split(mf.options.childsep || '~');
-        var csegs = ksegs[ksegs.length - 1].split(mf.options.sep || '!');
-        return csegs[0];
-    }
+    mf.bucket = function (bucket) {
+        var opts = underscore.clone(mf.options);
+        opts.bucket = bucket;
+        return new VeryLevelModel(mf.definition, opts);
+    };
     
     function handleOpts(name, opts, callback) {
         if (typeof callback === 'undefined') {
@@ -54,8 +70,10 @@ function makeModelLevely(mf) {
         } else {
             opts.cb = callback;
         }
-        if (!opts.bucket) {
-            opts.bucket = mf.options.bucket;
+        if (opts.bucket) {
+            opts.db = mf.getBucketDB(opts.bucket);
+        } else {
+            opts.db = mf.options.db;
         }
         if (typeof opts.cb !== 'function') {
             throw Error('The last argument in ' + name + 'must be a function');
@@ -66,10 +84,17 @@ function makeModelLevely(mf) {
     mf.load = function (key, opts, callback) {
         //if this isn't a child and the user didn't include the prefix, add it
         opts = handleOpts('Factory.get', opts, callback);
-        if (getLastChildPrefix(key) !== this.options.prefix) {
-            key = joinSep(mf.options.prefix, key);
+
+        if (typeof key === 'undefined') {
+            throw new Error("key cannot be undefined for get/load in " + mf.options.prefix);
+        } else if (typeof key === 'number') {
+            key = keylib.joinSep(mf, mf.options.prefix, base60.encode(key));
         }
-        mf.options.db.get(key, function (err, result) {
+
+        if (keylib.getLastChildPrefix(mf, key) !== this.options.prefix) {
+            key = keylib.joinSep(mf, mf.options.prefix, key);
+        }
+        opts.db.get(key, function (err, result) {
             var obj;
             if (!err) {
                 obj = mf.create(result);
@@ -85,11 +110,16 @@ function makeModelLevely(mf) {
 
     mf.delete = function (key, opts, callback) {
         opts = handleOpts('Factory.delete', opts, callback);
-        mf.options.db.del(key, opts.cb);
+        opts.db.del(key, opts.cb);
     };
 
     mf.update = function (key, updated_fields, opts, callback) {
         opts = handleOpts('Factory.update', opts, callback);
+        if (typeof key === 'undefined') {
+            throw new Error("key cannot be undefined for update in " + mf.options.prefix);
+        } else if (typeof key === 'number') {
+            key = keylib.joinSep(mf, mf.options.prefix, base60.encode(key));
+        }
         mf.load(key, function (err, result) {
             if (!err && result) {
                 var keys = Object.keys(updated_fields);
@@ -124,7 +154,7 @@ function makeModelLevely(mf) {
         var limit = opts.limit || -1;
         var objects = [];
         var err;
-        var stream = mf.options.db.createReadStream({
+        var stream = opts.db.createReadStream({
             start : mf.options.prefix,
             end : mf.options.prefix + '~',
         });
@@ -159,9 +189,9 @@ function makeModelLevely(mf) {
         var objects = [];
         var keys = [];
         
-        var stream = mf.options.db.createReadStream({
-            start: joinSep('__index__', mf.options.prefix, index, undefined),
-            end: joinSep('__index__', mf.options.prefix, index, '~'),
+        var stream = opts.db.createReadStream({
+            start: keylib.joinSep(mf, '__index__', mf.options.prefix, index, undefined),
+            end: keylib.joinSep(mf, '__index__', mf.options.prefix, index, '~'),
         });
         stream.on('data', function (entry) {
             var index = entry.value;
@@ -205,17 +235,6 @@ function makeModelLevely(mf) {
         });
     };
 
-    function indexName(factory, field, value, is_int) {
-        if (!is_int) {
-            value = String(value).substring(0, 10).replace(/\s/g, "X");
-        } else {
-            value = base60.encode(value);
-            value = '0000000000'.slice(0, 10 - value.length) + value;
-        }
-        var hash = crypto.createHash('md5').update(String(value)).digest('hex');
-        var result = joinSep('__index__', factory.options.prefix, field, value, hash);
-        return result;
-    }
 
 
     mf.getByIndex = function (field, value, opts, callback) {
@@ -224,7 +243,7 @@ function makeModelLevely(mf) {
         var offset = opts.offset || 0;
         var limit = opts.limit || -1;
         if (this.definition[field].index === true || this.definition[field].index_int === true) {
-            mf.options.db.get(indexName(mf, field, value, this.definition[field].index_int), function (err, index) {
+            opts.db.get(keylib.indexName(mf, field, value, this.definition[field].index_int), function (err, index) {
                 var keys;
                 if (err || !index) index = {};
                 if (index.hasOwnProperty(value)) {
@@ -241,7 +260,7 @@ function makeModelLevely(mf) {
                         keys = keys.slice(0, limit);
                     }
                     async.map(keys, function (key, acb) {
-                        mf.options.db.get(key, function (err, result) {
+                        opts.db.get(key, function (err, result) {
                             var obj;
                             if (!err) {
                                 obj = mf.create(result);
@@ -273,10 +292,11 @@ function makeModelLevely(mf) {
         mf.getByIndex.call(this, field, value, {keyfilter: opts.keyfilter, limit: 1}, opts.cb);
     };
 
-    function deleteFromIndex(factory, field, value, key, callback) {
+    function deleteFromIndex(db, field, value, key, callback) {
+        var factory = mf;
         value = String(value);
-        var ikey = indexName(factory, field, value);
-        factory.options.db.get(ikey, function (err, obj) {
+        var ikey = keylib.indexName(factory, field, value);
+        db.get(ikey, function (err, obj) {
             var idx, lidx;
             if (!err && obj) {
                 idx = obj[value].indexOf(key);
@@ -291,9 +311,9 @@ function makeModelLevely(mf) {
                         }
                     }
                     if (foundvals) { 
-                        factory.options.db.put(ikey, obj, callback);
+                        db.put(ikey, obj, callback);
                     } else {
-                        factory.options.db.del(ikey, callback);
+                        db.del(ikey, callback);
                     }
                 } else {
                     callback();
@@ -305,18 +325,18 @@ function makeModelLevely(mf) {
     }
 
     mf.extendModel({
-        getNextKey: function (callback)  {
-            mf.options.db.get(joinSep('__counter__', mf.options.prefix), function (err, ctr) {
+        getNextKey: function (opts, callback)  {
+            opts.db.get(keylib.joinSep(mf, '__counter__', mf.options.prefix), function (err, ctr) {
                 var value;
                 ctr = ctr || 0;
                 ctr++;
                 value = base60.encode(ctr);
                 value = '00000000'.slice(0, 8 - value.length) + value;
-                value = joinSep(mf.options.prefix, value);
+                value = keylib.joinSep(mf, mf.options.prefix, value);
                 if (this.__verymeta.parent) {
-                    value = joinChild(this.__verymeta.parent.key, value);
+                    value = keylib.joinChild(mf, this.__verymeta.parent.key, value);
                 }
-                mf.options.db.put(joinSep('__counter__', mf.options.prefix), ctr, function (err) {
+                opts.db.put(keylib.joinSep(mf, '__counter__', mf.options.prefix), ctr, function (err) {
                     callback(null, value);
                 });
             }.bind(this));
@@ -329,20 +349,20 @@ function makeModelLevely(mf) {
                         if (this.key) {
                             acb(null, this.key);
                         } else {
-                            this.getNextKey(acb);
+                            this.getNextKey(opts, acb);
                         }
                     }.bind(this),
                     function (key, acb) {
                         this.key = key;
-                        this.__verymeta.db.put(this.key, this.toJSON(), acb);
+                        opts.db.put(this.key, this.toJSON(), acb);
                     }.bind(this),
                     function (acb) {
                         async.each(Object.keys(this.__verymeta.defs), function (field, scb) {
                             var ikey;
                             if (this.__verymeta.defs[field].index === true || this.__verymeta.defs[field].index_int === true) {
                                 var value = this[field];
-                                ikey = indexName(mf, field, value, this.__verymeta.defs[field].index_int);
-                                this.__verymeta.db.get(ikey, function (err, obj) {
+                                ikey = keylib.indexName(mf, field, value, this.__verymeta.defs[field].index_int);
+                                opts.db.get(ikey, function (err, obj) {
                                     var objkeys, idx, kidx;
                                     if (err || !obj) {
                                         obj = {};
@@ -351,9 +371,9 @@ function makeModelLevely(mf) {
                                     if (obj[String(value)].indexOf(this.key) == -1) {
                                         obj[String(value)].push(this.key);
                                     }
-                                    this.__verymeta.db.put(ikey, obj, function (err) {
+                                    opts.db.put(ikey, obj, function (err) {
                                         if (this.__verymeta.old_data.hasOwnProperty(field) && this.__verymeta.old_data[field] != this[field]) {
-                                            deleteFromIndex(mf, field, this.__verymeta.old_data[field], this.key, scb);
+                                            deleteFromIndex(opts.db, field, this.__verymeta.old_data[field], this.key, scb);
                                         } else {
                                             scb(err);
                                         }
@@ -380,7 +400,7 @@ function makeModelLevely(mf) {
         },
         delete: function (opts, callback) {
             opts = handleOpts(mf.options.prefix + 'delete', opts, callback);
-            this.__verymeta.db.del(this.key, function (err) {
+            opts.db.del(this.key, function (err) {
                 if (typeof mf.options.onDelete === 'function') {
                     mf.options.onDelete.call(this, err, {model: this, ctx: opts.ctx}, opts.cb);
                 } else {
@@ -400,7 +420,7 @@ function makeModelLevely(mf) {
             var limit = opts.limit || -1;
             var objects = [];
             var err;
-            var stream = this.__verymeta.db.createReadStream({
+            var stream = opts.db.createReadStream({
                 start : this.key + (factory.options.childsep || '~') + factory.options.prefix,
                 end : this.key + (factory.options.childsep || '~') + factory.options.prefix + '~'
             });

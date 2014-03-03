@@ -315,9 +315,9 @@ module.exports = {
                     TZ.allSortByIndex('idx', {offset: 2, limit: 3, reverse: true}, function (err, nums) {
                         test.ifError(err);
                         test.equals(nums.length, 3);
-                        test.equals(nums[0].idx, 24);
+                        test.equals(nums[0].idx, 100);
                         test.equals(nums[1].idx, 50);
-                        test.equals(nums[2].idx, 100);
+                        test.equals(nums[2].idx, 24);
                         test.done();
                     });
                 });

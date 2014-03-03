@@ -100,6 +100,8 @@ The VeryLevelModel constructor takes field definitions and options objects. The 
 * `db` the levelup instance
 * `prefix` the key prefix unique to this model factory in this database
 * `onSave` a function that is called when the model instance is saved
+* `bucket` a bucket to save an load, like a sub-database
+* `dbdir` directory to keep all db files in
 
 ### onSave
 

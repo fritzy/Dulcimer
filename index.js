@@ -153,11 +153,20 @@ function makeModelLevely(mf) {
         var offset = opts.offset || 0;
         var limit = opts.limit || -1;
         var objects = [];
-        var err;
-        var stream = opts.db.createReadStream({
-            start : mf.options.prefix,
-            end : mf.options.prefix + '~',
-        });
+        var err, stream;
+        if (opts.reverse) {
+            stream = opts.db.createReadStream({
+                end: mf.options.prefix + (mf.options.sep || '!'),
+                start: mf.options.prefix + (mf.options.sep || '!') + '~',
+                reverse: opts.reverse
+            });
+        } else { 
+            stream = opts.db.createReadStream({
+                start : mf.options.prefix + (mf.options.sep || '!'),
+                end : mf.options.prefix + (mf.options.sep || '!') + '~',
+                reverse: opts.reverse
+            });
+        }
         stream.on('data', function (entry) {
             if (entry.key.indexOf(mf.options.childsep || '~') == -1) {
                 if (offset === 0) {
@@ -188,11 +197,20 @@ function makeModelLevely(mf) {
         var limit = opts.limit || -1;
         var objects = [];
         var keys = [];
-        
-        var stream = opts.db.createReadStream({
-            start: keylib.joinSep(mf, '__index__', mf.options.prefix, index, undefined),
-            end: keylib.joinSep(mf, '__index__', mf.options.prefix, index, '~'),
-        });
+        var stream;
+        if (opts.reverse) {
+            stream = opts.db.createReadStream({
+                end: keylib.joinSep(mf, '__index__', mf.options.prefix, index, undefined),
+                start: keylib.joinSep(mf, '__index__', mf.options.prefix, index, '~'),
+                reverse: opts.reverse
+            });
+        } else {
+            stream = opts.db.createReadStream({
+                start: keylib.joinSep(mf, '__index__', mf.options.prefix, index, undefined),
+                end: keylib.joinSep(mf, '__index__', mf.options.prefix, index, '~'),
+                reverse: opts.reverse
+            });
+        }
         stream.on('data', function (entry) {
             var index = entry.value;
             var values = Object.keys(index).sort();

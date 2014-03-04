@@ -26,6 +26,7 @@ function makeModelLevely(mf) {
         throw new Error("Model factories must include a prefix option.");
     }
 
+    /*
     if (!mf.options.db) {
         throw new Error("Model factories must include a db option of a levelup instance with valueEncoding of json.");
     }
@@ -33,7 +34,7 @@ function makeModelLevely(mf) {
     if (mf.options.db.options.valueEncoding != 'json') {
         throw new Error("The levelup db must have valueEncoding set as json.");
     }
-
+    */
 
     mf.addDefinition({
         key: {
@@ -437,11 +438,18 @@ function makeModelLevely(mf) {
             var offset = opts.offset || 0;
             var limit = opts.limit || -1;
             var objects = [];
-            var err;
-            var stream = opts.db.createReadStream({
-                start : this.key + (factory.options.childsep || '~') + factory.options.prefix,
-                end : this.key + (factory.options.childsep || '~') + factory.options.prefix + '~'
-            });
+            var err, stream;
+            if (opts.reverse) {
+                stream = opts.db.createReadStream({
+                    start : this.key + (factory.options.childsep || '~') + factory.options.prefix,
+                    end : this.key + (factory.options.childsep || '~') + factory.options.prefix + '~'
+                });
+            } else {
+                stream = opts.db.createReadStream({
+                    start : this.key + (factory.options.childsep || '~') + factory.options.prefix,
+                    end : this.key + (factory.options.childsep || '~') + factory.options.prefix + '~'
+                });
+            }
             stream.on('data', function (entry) {
                 var segs = entry.key.split(factory.childsep || '~');
                 var inst;

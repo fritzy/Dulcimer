@@ -20,6 +20,11 @@ The same as:
 
 Except that you could re-use it.
 
+The same as:
+
+    var FactoryWithBucket = Factory.bucket('something');
+    FactoryWithBucket.get('somekey', function ...);
+
 ###get
 
 `get(key, function (err, modelinstance) { ... })`
@@ -37,7 +42,7 @@ Opts: {validate: true} do validation of updated object before saving. Callback w
 
 
 ### all
-`all(opts, function(err, instances) { ... })`
+`all(opts, function(err, instances, info) { ... })`
 
     opts = {
         offset: 0, //number of keys in to offset 
@@ -47,8 +52,10 @@ Opts: {validate: true} do validation of updated object before saving. Callback w
         db: override levelup db connection
     }
 
+`info` gives the offset, limit, sortBy, count, used, and the total.
+
 ### getByIndex
-`getByIndex(indexed_field, value, opts, function (err, instances) { ... }`
+`getByIndex(indexed_field, value, opts, function (err, instances, info) { ... }`
 
     opts = {
         offset: 0, //number of keys in to offset 
@@ -56,6 +63,8 @@ Opts: {validate: true} do validation of updated object before saving. Callback w
         bucket: override bucket
         db: override db
     }
+
+`info` gives the offset, limit, sortBy, count, used, and the total.
 
 ### findByIndex
 `findByIndex(indexed_field, value, opts, function (err, instance) { ... }`
@@ -88,10 +97,10 @@ Opts: {validate: true} do validation of updated object before saving. Callback w
 `createChild(factory, { values }, function (err, instance) { ... })`
 
 ###getChildren
-`getChildren(factory, function (err, instances) { ... })`
+`getChildren(factory, opts, function (err, instances, info) { ... })`
 
 ###getChildrenByIndex
-`getChildrenByIndex(factory, indexed_field, value, function(err, instances) { ... })`
+`getChildrenByIndex(factory, indexed_field, value, opts, function(err, instances, info) { ... })`
 
 ## Options
 

@@ -12,19 +12,17 @@ function makeModelLevely(mf) {
     var savelock = new Padlock();
 
     function incrementKey(db, key, change, callback) {
-        savelock.runwithlock(function () {
-            var count;
-            db.get(key, {valueEncoding: 'utf8'}, function (err, val) {
-                if (err || !val) {
-                    count = 0;
-                } else {
-                    count = parseInt(val, 10);
-                }
-                count += change;
-                db.put(key, count, {valueEncoding: 'utf8'}, function (err, val) {
-                    savelock.release();
-                    callback(err, count);
-                });
+        var count;
+        db.get(key, {valueEncoding: 'utf8'}, function (err, val) {
+            if (err || !val) {
+                count = 0;
+            } else {
+                count = parseInt(val, 10);
+            }
+            count += change;
+            db.put(key, count, {valueEncoding: 'utf8'}, function (err, val) {
+                savelock.release();
+                callback(err, count);
             });
         });
     }
@@ -231,7 +229,9 @@ function makeModelLevely(mf) {
             opts.cb(err, null);
         });
         stream.on('close', function () {
-            opts.cb(err, objects, {count: count, offset: opts.offset || 0, limit: opts.limit || -1});
+            opts.db.get(keylib.joinSep(mf, '__total__', mf.options.prefix), {valueEncoding: 'utf8'}, function (err, cnt) {
+                opts.cb(err, objects, {count: count, offset: opts.offset || 0, limit: opts.limit || -1, total: parseInt(cnt, 10)});
+            });
         });
     };
 
@@ -292,25 +292,27 @@ function makeModelLevely(mf) {
                     });
                 },
                 function (err) {
-                    opts.cb(null, objects, {count: count, offset: opts.offset || 0, limit: opts.limit || -1});
+                    opts.db.get(keylib.joinSep(mf, '__total__', mf.options.prefix), {valueEncoding: 'utf8'}, function (err, cnt) {
+                        opts.cb(null, objects, {count: count, offset: opts.offset || 0, limit: opts.limit || -1, total: parseInt(cnt, 10), sortBy: index});
+                    });
                 }
             );
         });
     };
-
-
 
     mf.getByIndex = function (field, value, opts, callback) {
         opts = handleOpts('Factory.getByIndex', opts, callback);
         var count = 0;
         var offset = opts.offset || 0;
         var limit = opts.limit || -1;
+        var total = 0;
         if (this.definition[field].index === true || this.definition[field].index_int === true) {
             opts.db.get(keylib.indexName(mf, field, value, this.definition[field].index_int), function (err, index) {
                 var keys;
                 if (err || !index) index = {};
                 if (index.hasOwnProperty(value)) {
                     keys = index[value];
+                    total = keys.length;
                     if (opts.keyfilter) {
                         keys = keys.filter(function (key) {
                             return key.indexOf(opts.keyfilter) === 0;
@@ -336,9 +338,9 @@ function makeModelLevely(mf) {
                     }.bind(this),
                     function (err, results) {
                         if (limit === 1) {
-                            opts.cb(err, results[0]);
+                            opts.cb(err, results[0], {count: count, offset: opts.offset || 0, limit: limit, total: total});
                         } else {
-                            opts.cb(err, results);
+                            opts.cb(err, results, {count: count, offset: opts.offset || 0, limit: limit, total: total});
                         }
                     });
                 } else {
@@ -389,33 +391,51 @@ function makeModelLevely(mf) {
 
     mf.extendModel({
         getNextKey: function (opts, callback)  {
-            opts.db.get(keylib.joinSep(mf, '__counter__', mf.options.prefix), function (err, ctr) {
-                var value;
-                ctr = ctr || 0;
-                ctr++;
+            incrementKey(opts.db, keylib.joinSep(mf, '__counter__', mf.options.prefix), 1, function (err, ctr) {
+                var value, prefix;
                 value = base60.encode(ctr);
                 value = '00000000'.slice(0, 8 - value.length) + value;
-                value = keylib.joinSep(mf, mf.options.prefix, value);
-                if (this.__verymeta.parent) {
-                    value = keylib.joinChild(mf, this.__verymeta.parent.key, value);
-                }
-                opts.db.put(keylib.joinSep(mf, '__counter__', mf.options.prefix), ctr, function (err) {
-                    callback(null, value);
-                });
+                prefix = this.getPrefix();
+                value = keylib.joinSep(mf, prefix, value);
+                callback(err, value);
             }.bind(this));
         },
+        getPrefix: function () {
+            var prefix = mf.options.prefix;
+            if (this.__verymeta.parent) {
+                prefix = keylib.joinChild(mf, this.__verymeta.parent.key, prefix);
+            }
+            return prefix;
+        },
         __save: function (opts) {
+            var newkey = false;
             async.waterfall([
                 function (acb) {
+                    //generate key
                     if (this.key) {
                         acb(null, this.key);
                     } else {
+                        newkey = true;
                         this.getNextKey(opts, acb);
                     }
                 }.bind(this),
                 function (key, acb) {
+                    //save the key
                     this.key = key;
                     opts.db.put(this.key, this.toJSON(), acb);
+                }.bind(this),
+                function (acb) {
+                    //incremeent
+                    var totalkey;
+                    if (newkey) {
+                        totalkey = this.getPrefix();
+                        totalkey = keylib.joinSep(mf, '__total__', totalkey);
+                        incrementKey(opts.db, totalkey, 1, function (err, ctr) {
+                            acb();
+                        });
+                    } else {
+                        acb();
+                    }
                 }.bind(this),
                 function (acb) {
                     async.each(Object.keys(this.__verymeta.defs), function (field, scb) {
@@ -468,23 +488,27 @@ function makeModelLevely(mf) {
         },
         __delete: function (opts) {
             opts.db.del(this.key, function (err) {
+                var totalkey;
                 if (err) {
                     opts.cb(err);
                     return;
                 }
-                async.each(Object.keys(this.__verymeta.defs), function (field, acb) {
-                    if (this.__verymeta.defs[field].index === true || this.__verymeta.defs[field].index_int === true) {
-                        deleteFromIndex(opts.db, field, this[field], this.key, acb);
-                    } else {
-                        acb();
-                    }
-                }.bind(this),
-                function (err) {
-                    if (typeof mf.options.onDelete === 'function') {
-                        mf.options.onDelete.call(this, err, {model: this, ctx: opts.ctx}, opts.cb);
-                    } else {
-                        opts.cb(err);
-                    }
+                totalkey = keylib.joinSep(mf, '__total__', this.getPrefix());
+                incrementKey(opts.db, totalkey, -1, function (err, ctr) {
+                    async.each(Object.keys(this.__verymeta.defs), function (field, acb) {
+                        if (this.__verymeta.defs[field].index === true || this.__verymeta.defs[field].index_int === true) {
+                            deleteFromIndex(opts.db, field, this[field], this.key, acb);
+                        } else {
+                            acb();
+                        }
+                    }.bind(this),
+                    function (err) {
+                        if (typeof mf.options.onDelete === 'function') {
+                            mf.options.onDelete.call(this, err, {model: this, ctx: opts.ctx}, opts.cb);
+                        } else {
+                            opts.cb(err);
+                        }
+                    }.bind(this));
                 }.bind(this));
             }.bind(this));
         },
@@ -543,8 +567,11 @@ function makeModelLevely(mf) {
                 opts.cb(err, null);
             });
             stream.on('close', function () {
-                opts.cb(err, objects);
-            });
+                var countkey = keylib.joinChild(mf, keylib.joinSep(mf, '__total__', this.key), factory.options.prefix);
+                opts.db.get(countkey, {valueEncoding: 'utf8'}, function (err, cnt) {
+                    opts.cb(err, objects, {count: count, offset: opts.offset || 0, limit: limit, total: parseInt(cnt, 10)});
+                }.bind(this));
+            }.bind(this));
         },
         getChildrenByIndex: function (factory, field, value, opts, callback) {
             opts = handleOpts(mf.options.prefix + 'getChildrenByIndex', opts, callback);

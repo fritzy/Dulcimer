@@ -28,9 +28,14 @@ module.exports = {
                 });
             },
             function (err) {
-                tm.getChildren(TMC, function (err, children) {
+                tm.getChildren(TMC, function (err, children, info) {
                     test.equal(children.length, 10, "Not all children found (" + children.length + ")");
-                    test.done();
+                    children[0].delete(function (err) {
+                        tm.getChildren(TMC, function (err, children, info) {
+                            test.equal(info.total, 9);
+                            test.done();
+                        });
+                    });
                 });
             });
         });
@@ -109,7 +114,7 @@ module.exports = {
         tm.save(function (err) {
             TM.update(tm.key, {idx: 'nope'}, function (err, ntm) {
                 test.equals(tm.key, ntm.key);
-                TM.all(function (err, tms) {
+                TM.all(function (err, tms, info) {
                     test.equals(tms.length, 1);
                     test.done();
                 });
@@ -177,7 +182,8 @@ module.exports = {
                 tm.save(acb);
             },
             function (err) {
-                TM.all({limit: 10, offset: 10}, function (err, tms) {
+                TM.all({limit: 10, offset: 10}, function (err, tms, info) {
+                    test.equals(info.total, 100);
                     test.equals(tms[0].idx, 11);
                     test.equals(tms.length, 10);
                     test.equals(tms[9].idx, 20);
@@ -270,7 +276,7 @@ module.exports = {
     "index string ordering": function (test) {
         var TZ = new VeryLevelModel({idx: {}, name: {index: true}}, {db: db, prefix: 'idxorder'});
         var cidx = 0;
-        async.each(['ham', 'cheese', 'zamboni', 'cow', 'nope', 'apple'],
+        async.eachSeries(['ham', 'cheese', 'zamboni', 'cow', 'nope', 'apple'],
             function (name, acb) {
                 var tm = TZ.create({idx: cidx, name: name});
                 tm.save(function (err) {
@@ -295,7 +301,7 @@ module.exports = {
     "index integer ordering": function (test) {
         var TZ = new VeryLevelModel({idx: {index_int: true}}, {db: db, prefix: 'idxintorder'});
         var cidx = 0;
-        async.each([24, 100, 1, 244, 24, 34563653, 50],
+        async.eachSeries([24, 100, 1, 244, 24, 34563653, 50],
             function (name, acb) {
                 var tm = TZ.create({idx: name});
                 tm.save(function (err) {

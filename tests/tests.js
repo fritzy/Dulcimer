@@ -5,6 +5,7 @@ var async = require('async');
 var verymodel = require('verymodel');
 
 process.on('uncaughtException', function (err) {
+    console.trace();
     console.error(err.stack);
     process.exit();
 });
@@ -72,7 +73,7 @@ module.exports = {
     },
     'Delete key': function (test) {
         var TM = new VeryLevelModel({idx: {}}, {db: db, prefix: 'TM'});
-        var tm = TM.create({idx: 'crap', keyname: 'custom'});
+        var tm = TM.create({idx: 'crap', keyname: 'custom', index: true});
         test.equal(tm.key, 'TM!custom');
         tm.save(function (err) {
             test.ifError(err);

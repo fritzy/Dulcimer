@@ -11,6 +11,24 @@ function makeModelLevely(mf) {
 
     var savelock = new Padlock();
 
+    function incrementKey(db, key, change, callback) {
+        savelock.runwithlock(function () {
+            var count;
+            db.get(key, {valueEncoding: 'utf8'}, function (err, val) {
+                if (err || !val) {
+                    count = 0;
+                } else {
+                    count = parseInt(val, 10);
+                }
+                count += change;
+                db.put(key, count, {valueEncoding: 'utf8'}, function (err, val) {
+                    savelock.release();
+                    callback(err, count);
+                });
+            });
+        });
+    }
+
     mf.getBucketDB = function (bucket) {
         if (mf.options.dbdir.substr(-1) !== '/') {
             mf.options.dbdir += '/';
@@ -79,6 +97,12 @@ function makeModelLevely(mf) {
         if (typeof opts.cb !== 'function') {
             throw Error('The last argument in ' + name + 'must be a function');
         }
+        if (!opts.db) {
+            throw new Error("Model factories must include a db option of a levelup instance with valueEncoding of json.");
+        }
+        if (opts.db.isClosed()) {
+            mf.options.db = opts.db = mf.getBucketDB(mf.options.bucket || 'defaultbucket');
+        }
         return opts;
     }
 
@@ -110,38 +134,58 @@ function makeModelLevely(mf) {
     mf.get = mf.load;
 
     mf.delete = function (key, opts, callback) {
-        opts = handleOpts('Factory.delete', opts, callback);
-        opts.db.del(key, opts.cb);
+        savelock.runwithlock(function () {
+            opts = handleOpts('Factory.delete', opts, callback);
+            var optcb = opts.cb;
+            mf.get(key, opts, function (err, inst) {
+                if (!err && inst) {
+                    opts.cb = optcb;
+                    savelock.release();
+                    inst.__delete(opts, optcb);
+                } else {
+                    savelock.release();
+                    optcb("Not found");
+                }
+            });
+        }.bind(this));
     };
 
     mf.update = function (key, updated_fields, opts, callback) {
-        opts = handleOpts('Factory.update', opts, callback);
-        if (typeof key === 'undefined') {
-            throw new Error("key cannot be undefined for update in " + mf.options.prefix);
-        } else if (typeof key === 'number') {
-            key = keylib.joinSep(mf, mf.options.prefix, base60.encode(key));
-        }
-        mf.load(key, function (err, result) {
-            if (!err && result) {
-                var keys = Object.keys(updated_fields);
-                var errors;
-                for (var idx = 0; idx < keys.length; idx++) {
-                    result[keys[idx]] = updated_fields[keys[idx]];
-                }
-                if (opts.validate === true) {
-                    errors = result.doValidate();
-                }
-                if (typeof errors === 'undefined' ||  (Array.isArray(errors) && errors.length === 0) || !errors) {
-                    result.save({ctx: opts.ctx}, function (err) {
-                        opts.cb(err, result);
-                    });
-                } else {
-                    opts.cb(errors);
-                }
-            } else {
-                opts.cb(err);
+        savelock.runwithlock(function () {
+            opts = handleOpts('Factory.update', opts, callback);
+            if (typeof key === 'undefined') {
+                throw new Error("key cannot be undefined for update in " + mf.options.prefix);
+            } else if (typeof key === 'number') {
+                key = keylib.joinSep(mf, mf.options.prefix, base60.encode(key));
             }
-        });
+            mf.load(key, function (err, result) {
+                var cb;
+                if (!err && result) {
+                    var keys = Object.keys(updated_fields);
+                    var errors;
+                    for (var idx = 0; idx < keys.length; idx++) {
+                        result[keys[idx]] = updated_fields[keys[idx]];
+                    }
+                    if (opts.validate === true) {
+                        errors = result.doValidate();
+                    }
+                    if (typeof errors === 'undefined' ||  (Array.isArray(errors) && errors.length === 0) || !errors) {
+                        cb = opts.cb;
+                        opts.cb = function (err) {
+                            savelock.release();
+                            cb(err, result);
+                        };
+                        result.__save(opts);
+                    } else {
+                        savelock.release();
+                        opts.cb(errors);
+                    }
+                } else {
+                    savelock.release();
+                    opts.cb(err);
+                }
+            });
+        }.bind(this));
     };
 
     mf.all = function (opts, callback) {
@@ -360,72 +404,98 @@ function makeModelLevely(mf) {
                 });
             }.bind(this));
         },
-        save: function (opts, callback) {
-            savelock.runwithlock(function () {
-                opts = handleOpts(mf.options.prefix + '.save', opts, callback);
-                async.waterfall([
-                    function (acb) {
-                        if (this.key) {
-                            acb(null, this.key);
+        __save: function (opts) {
+            async.waterfall([
+                function (acb) {
+                    if (this.key) {
+                        acb(null, this.key);
+                    } else {
+                        this.getNextKey(opts, acb);
+                    }
+                }.bind(this),
+                function (key, acb) {
+                    this.key = key;
+                    opts.db.put(this.key, this.toJSON(), acb);
+                }.bind(this),
+                function (acb) {
+                    async.each(Object.keys(this.__verymeta.defs), function (field, scb) {
+                        var ikey;
+                        if (this.__verymeta.defs[field].index === true || this.__verymeta.defs[field].index_int === true) {
+                            var value = this[field];
+                            ikey = keylib.indexName(mf, field, value, this.__verymeta.defs[field].index_int);
+                            opts.db.get(ikey, function (err, obj) {
+                                var objkeys, idx, kidx;
+                                if (err || !obj) {
+                                    obj = {};
+                                }
+                                if (!obj.hasOwnProperty(String(value))) obj[value] = [];
+                                if (obj[String(value)].indexOf(this.key) == -1) {
+                                    obj[String(value)].push(this.key);
+                                }
+                                opts.db.put(ikey, obj, function (err) {
+                                    if (this.__verymeta.old_data.hasOwnProperty(field) && this.__verymeta.old_data[field] != this[field]) {
+                                        deleteFromIndex(opts.db, field, this.__verymeta.old_data[field], this.key, scb);
+                                    } else {
+                                        scb(err);
+                                    }
+                                }.bind(this));
+                            }.bind(this));
                         } else {
-                            this.getNextKey(opts, acb);
+                            scb();
                         }
                     }.bind(this),
-                    function (key, acb) {
-                        this.key = key;
-                        opts.db.put(this.key, this.toJSON(), acb);
-                    }.bind(this),
-                    function (acb) {
-                        async.each(Object.keys(this.__verymeta.defs), function (field, scb) {
-                            var ikey;
-                            if (this.__verymeta.defs[field].index === true || this.__verymeta.defs[field].index_int === true) {
-                                var value = this[field];
-                                ikey = keylib.indexName(mf, field, value, this.__verymeta.defs[field].index_int);
-                                opts.db.get(ikey, function (err, obj) {
-                                    var objkeys, idx, kidx;
-                                    if (err || !obj) {
-                                        obj = {};
-                                    }
-                                    if (!obj.hasOwnProperty(String(value))) obj[value] = [];
-                                    if (obj[String(value)].indexOf(this.key) == -1) {
-                                        obj[String(value)].push(this.key);
-                                    }
-                                    opts.db.put(ikey, obj, function (err) {
-                                        if (this.__verymeta.old_data.hasOwnProperty(field) && this.__verymeta.old_data[field] != this[field]) {
-                                            deleteFromIndex(opts.db, field, this.__verymeta.old_data[field], this.key, scb);
-                                        } else {
-                                            scb(err);
-                                        }
-                                    }.bind(this));
-                                }.bind(this));
-                            } else {
-                                scb();
-                            }
-                        }.bind(this),
-                        function (err) {
-                            acb(err);
-                        });
-                    }.bind(this),
-                ],
+                    function (err) {
+                        acb(err);
+                    });
+                }.bind(this),
+            ],
+            function (err) {
+                if (typeof mf.options.onSave === 'function') {
+                    mf.options.onSave.call(this, err, {model: this, changes: this.getChanges(), ctx: opts.ctx}, opts.cb);
+                } else {
+                    opts.cb(err);
+                }
+            }.bind(this));
+        },
+        save: function (opts, callback) {
+            opts = handleOpts(mf.options.prefix + '.save', opts, callback);
+            callback = opts.cb;
+            opts.cb = function () {
+                savelock.release();
+                callback.apply(null, arguments);
+            }.bind(this);
+            savelock.runwithlock(this.__save.bind(this), [opts], this);
+        },
+        __delete: function (opts) {
+            opts.db.del(this.key, function (err) {
+                if (err) {
+                    opts.cb(err);
+                    return;
+                }
+                async.each(Object.keys(this.__verymeta.defs), function (field, acb) {
+                    if (this.__verymeta.defs[field].index === true || this.__verymeta.defs[field].index_int === true) {
+                        deleteFromIndex(opts.db, field, this[field], this.key, acb);
+                    } else {
+                        acb();
+                    }
+                }.bind(this),
                 function (err) {
-                    if (typeof mf.options.onSave === 'function') {
-                        mf.options.onSave.call(this, err, {model: this, changes: this.getChanges(), ctx: opts.ctx}, opts.cb);
+                    if (typeof mf.options.onDelete === 'function') {
+                        mf.options.onDelete.call(this, err, {model: this, ctx: opts.ctx}, opts.cb);
                     } else {
                         opts.cb(err);
                     }
-                    savelock.release();
                 }.bind(this));
             }.bind(this));
         },
         delete: function (opts, callback) {
             opts = handleOpts(mf.options.prefix + 'delete', opts, callback);
-            opts.db.del(this.key, function (err) {
-                if (typeof mf.options.onDelete === 'function') {
-                    mf.options.onDelete.call(this, err, {model: this, ctx: opts.ctx}, opts.cb);
-                } else {
-                    opts.cb(err);
-                }
-            });
+            callback = opts.cb;
+            opts.cb = function () {
+                savelock.release();
+                callback.apply(null, arguments);
+            }.bind(this);
+            savelock.runwithlock(this.__delete.bind(this), [opts], this);
         },
         createChild: function (factory, obj) {
             var clone = new VeryLevelModel(factory.definition, factory.options);

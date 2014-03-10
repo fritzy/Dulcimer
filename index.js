@@ -156,7 +156,7 @@ function makeModelLevely(mf) {
             } else if (typeof key === 'number') {
                 key = keylib.joinSep(mf, mf.options.prefix, base60.encode(key));
             }
-            mf.load(key, function (err, result) {
+            mf.load(key, {bucket: opts.bucket, db: opts.db}, function (err, result) {
                 var cb;
                 if (!err && result) {
                     var keys = Object.keys(updated_fields);
@@ -302,7 +302,7 @@ function makeModelLevely(mf) {
         stream.on('close', function () {
             async.eachSeries(keys,
                 function (key, acb) {
-                    mf.get(key, function (err, inst) {
+                    mf.get(key, {bucket: opts.bucket, db: opts.db}, function (err, inst) {
                         if (!err || inst) {
                             objects.push(inst);
                         } else {
@@ -492,7 +492,7 @@ function makeModelLevely(mf) {
             ],
             function (err) {
                 if (typeof mf.options.onSave === 'function') {
-                    mf.options.onSave.call(this, err, {model: this, changes: this.getChanges(), ctx: opts.ctx}, opts.cb);
+                    mf.options.onSave.call(this, err, {model: this, changes: this.getChanges(), ctx: opts.ctx, saveOpts: opts}, opts.cb);
                 } else {
                     opts.cb(err);
                 }
@@ -525,7 +525,7 @@ function makeModelLevely(mf) {
                     }.bind(this),
                     function (err) {
                         if (typeof mf.options.onDelete === 'function') {
-                            mf.options.onDelete.call(this, err, {model: this, ctx: opts.ctx}, opts.cb);
+                            mf.options.onDelete.call(this, err, {model: this, ctx: opts.ctx, deleteOpts: opts}, opts.cb);
                         } else {
                             opts.cb(err);
                         }

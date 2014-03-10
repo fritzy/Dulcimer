@@ -235,6 +235,26 @@ function makeModelLevely(mf) {
         });
     };
 
+    mf.getTotal = function (opts, callback) {
+        opts = handleOpts('Factory.getTotal', opts, callback);
+        opts.db.get(keylib.joinSep(mf, '__total__', mf.options.prefix), {valueEncoding: 'utf8'}, function (err, cnt) {
+            if (!cnt) cnt = 0;
+            cnt = parseInt(cnt, 10);
+            opts.cb(null, cnt);
+        });
+    };
+
+    mf.getIndexTotal = function (field, value, opts, callback) {
+        opts = handleOpts('Factory.getIndexTotal', opts, callback);
+        opts.db.get(keylib.indexName(mf, field, value, this.definition[field].index_int), function (err, index) {
+            var count = 0;
+            if (!err && index && index.hasOwnProperty(value) && Array.isArray(index[value])) {
+                count = index[value].length;
+            }
+            opts.cb(null, count);
+        });
+    };
+
     mf.allSortByIndex = function (index, opts, callback) {
         opts = handleOpts('Factory.allSortByIndex', opts, callback);
         var count = 0;
@@ -354,7 +374,8 @@ function makeModelLevely(mf) {
     
     mf.findByIndex = function (field, value, opts, callback) {
         opts = handleOpts('Factory.findByIndex', opts, callback);
-        mf.getByIndex.call(this, field, value, {keyfilter: opts.keyfilter, limit: 1}, opts.cb);
+        opts.limit = 1;
+        mf.getByIndex.call(this, field, value, opts, opts.cb);
     };
 
     function deleteFromIndex(db, field, value, key, callback) {

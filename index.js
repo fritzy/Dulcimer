@@ -1,11 +1,11 @@
-var verymodel = require('verymodel');
-var uuid = require('node-uuid');
-var async = require('async');
-var base60 = require('base60');
-var Padlock = require('padlock').Padlock;
-var keylib = require('./lib/keys');
+var verymodel  = require('verymodel');
+var uuid       = require('node-uuid');
+var async      = require('async');
+var base60     = require('base60');
+var Padlock    = require('padlock').Padlock;
+var keylib     = require('./lib/keys');
 var underscore = require('underscore');
-var getDBPath = require('./lib/dbpool');
+var getDBPath  = require('./lib/dbpool');
 
 function makeModelLevely(mf) {
 
@@ -58,7 +58,7 @@ function makeModelLevely(mf) {
                 var value;
                 if (this.__verymeta.data.key) return this.__verymeta.data.key;
                 if (this.__verymeta.parent) {
-                    value = this.__verymeta.parent.key + (this.__verymeta.childsep || '~') + this.__verymeta.prefix + (this.__verymeta.sep || '!');
+                    value = keylib.joinChild(mf, keylib.joinSep(mf, ('__child__', this.__verymeta.parent.key)), this.__verymeta.prefix, undefined);
                 } else {
                     value = this.__verymeta.prefix + (this.__verymeta.sep || '!');
                 }
@@ -424,7 +424,7 @@ function makeModelLevely(mf) {
         getPrefix: function () {
             var prefix = mf.options.prefix;
             if (this.__verymeta.parent) {
-                prefix = keylib.joinChild(mf, this.__verymeta.parent.key, prefix);
+                prefix = keylib.joinChild(mf, keylib.joinSep(mf, '__child__', this.__verymeta.parent.key), prefix);
             }
             return prefix;
         },
@@ -554,31 +554,32 @@ function makeModelLevely(mf) {
             var limit = opts.limit || -1;
             var objects = [];
             var err, stream;
+            var prefix = keylib.joinChild(mf, keylib.joinSep(mf, '__child__', this.key), factory.options.prefix);
+            var prefix_end = prefix + '~';
             if (opts.reverse) {
                 stream = opts.db.createReadStream({
-                    start : this.key + (factory.options.childsep || '~') + factory.options.prefix,
-                    end : this.key + (factory.options.childsep || '~') + factory.options.prefix + '~'
+                    start : prefix_end,
+                    end : prefix,
+                    reverse: true,
                 });
             } else {
                 stream = opts.db.createReadStream({
-                    start : this.key + (factory.options.childsep || '~') + factory.options.prefix,
-                    end : this.key + (factory.options.childsep || '~') + factory.options.prefix + '~'
+                    start : prefix,
+                    end : prefix_end,
                 });
             }
             stream.on('data', function (entry) {
                 var segs = entry.key.split(factory.childsep || '~');
                 var inst;
                 //if the child is prefixed with this factory's prefix
-                if (segs[segs.length - 1].indexOf(factory.options.prefix) === 0) {
-                    if (offset < 1) {
-                        inst = factory.create(entry.value);
-                        inst.key = entry.key;
-                        inst.__verymeta.parent = this;
-                        objects.push(inst);
-                        count++;
-                    } else {
-                        offset--;
-                    }
+                if (offset < 1) {
+                    inst = factory.create(entry.value);
+                    inst.key = entry.key;
+                    inst.__verymeta.parent = this;
+                    objects.push(inst);
+                    count++;
+                } else {
+                    offset--;
                 }
                 if (limit !== -1 && count >= limit) {
                     stream.destroy();
@@ -588,15 +589,16 @@ function makeModelLevely(mf) {
                 opts.cb(err, null);
             });
             stream.on('close', function () {
-                var countkey = keylib.joinChild(mf, keylib.joinSep(mf, '__total__', this.key), factory.options.prefix);
+                var countkey = keylib.joinChild(mf, keylib.joinSep(mf, '__total__', '__child__', this.key), factory.options.prefix);
                 opts.db.get(countkey, {valueEncoding: 'utf8'}, function (err, cnt) {
                     opts.cb(err, objects, {count: count, offset: opts.offset || 0, limit: limit, total: parseInt(cnt, 10)});
                 }.bind(this));
             }.bind(this));
         },
         getChildrenByIndex: function (factory, field, value, opts, callback) {
+            var prefix = keylib.joinChild(mf, keylib.joinSep(mf, '__child__', this.key), factory.options.prefix);
             opts = handleOpts(mf.options.prefix + 'getChildrenByIndex', opts, callback);
-            factory.getByIndex(field, value, {keyfilter: this.key + (factory.options.sep || '!') + factory.options.prefix}, opts.cb);
+            factory.getByIndex(field, value, {keyfilter: prefix}, opts.cb);
         },
     });
     return mf;

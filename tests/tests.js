@@ -23,7 +23,8 @@ module.exports = {
             },
             function (acb) {
                 var tmc = tm.createChild(TMC, {cidx: cidx});
-                tmc.save(function (err, tmc) {
+                tmc.save(function (err) {
+                    console.log(tmc.key);
                     acb(err);
                 });
             },

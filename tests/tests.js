@@ -65,8 +65,7 @@ module.exports = {
                 tm.save(function (err) {
                     test.ifError(err);
                     TM.getByIndex('idx', 'ham', function (err, tms) {
-                        test.ok(err);
-                        test.ok(!tms);
+                        test.ok(Array.isArray(tms) && tms.length === 0);
                         TM.getByIndex('idx', 'salami', function (err, tms) {
                             test.equals(tms.length, 1);
                             test.done();
@@ -357,7 +356,7 @@ module.exports = {
                     TZ.getByIndex('complete', false, function (err, tzs) {
                         test.equals(tzs.length, 1);
                         TZ.getByIndex('complete', true, function (err, tzs) {
-                            test.ok(!tzs);
+                            test.ok(!tzs || (Array.isArray(tzs) && tzs.length === 0));
                             test.done();
                         });
                     });

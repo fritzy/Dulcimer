@@ -42,16 +42,6 @@ function makeModelLevely(mf) {
         throw new Error("Model factories must include a prefix option.");
     }
 
-    /*
-    if (!mf.options.db) {
-        throw new Error("Model factories must include a db option of a levelup instance with valueEncoding of json.");
-    }
-
-    if (mf.options.db.options.valueEncoding != 'json') {
-        throw new Error("The levelup db must have valueEncoding set as json.");
-    }
-    */
-
     mf.addDefinition({
         key: {
             derive: function () {
@@ -75,18 +65,38 @@ function makeModelLevely(mf) {
         },
     });
 
+
     var bin_indexes = [];
     var int_indexes = [];
+    var submodel_fields = [];
 
     var def_fields = Object.keys(mf.definition);
 
-    for (var fidx in def_fields) {
-        if (mf.definition[def_fields[fidx]].index === true) {
-            bin_indexes.push(def_fields[fidx]);
-        } else if (mf.definition[def_fields[fidx]].index_int === true) {
-            int_indexes.push(def_fields[fidx]);
+    (function () {
+        var newdef, def, field;
+        for (var fidx in def_fields) {
+            def = mf.definition[def_fields[fidx]];
+            field = def_fields[fidx];
+            if (def.index === true) {
+                bin_indexes.push(field);
+            } else if (def.index_int === true) {
+                int_indexes.push(def_fields[fidx]);
+            }
+            if (def.hasOwnProperty('foreignKey')) {
+                submodel_fields.push(field);
+                def.processOut = function (value) {
+                    if (value) {
+                        return value.key;
+                    } else {
+                        return value;
+                    }
+                };
+                newdef = {};
+                newdef[field] = def;
+                mf.addDefinition(newdef);
+            }
         }
-    }
+    })();
 
     mf.bucket = function (bucket) {
         var opts = underscore.clone(mf.options);
@@ -121,6 +131,10 @@ function makeModelLevely(mf) {
         //if this isn't a child and the user didn't include the prefix, add it
         opts = handleOpts('Factory.get', opts, callback);
 
+        if (typeof opts.depth === 'undefined') {
+            opts.depth = 1;
+        }
+
         if (typeof key === 'undefined') {
             throw new Error("key cannot be undefined for get/load in " + mf.options.prefix);
         } else if (typeof key === 'number') {
@@ -131,11 +145,24 @@ function makeModelLevely(mf) {
             key = keylib.joinSep(mf, mf.options.prefix, key);
         }
         opts.db.get(key, function (err, result) {
-            var obj;
+            var obj, out;
             if (!err) {
                 obj = mf.create(result);
                 obj.key = key;
-                opts.cb(err, obj);
+                if (submodel_fields.length > 0 && opts.depth > 0) {
+                    async.each(submodel_fields,
+                        function (field, ecb) {
+                            mf.definition[field].foreignKey.load(result[field], {db: opts.db, depth: opts.depth - 1}, function (err, subresult) {
+                                obj[field] = subresult;
+                                ecb(err);
+                            });
+                        },
+                        function (err) {
+                            opts.cb(err, obj);
+                        });
+                } else {
+                    opts.cb(err, obj);
+                }
             } else {
                 opts.cb(err);
             }

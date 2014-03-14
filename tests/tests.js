@@ -400,4 +400,19 @@ module.exports = {
             });
         });
     },
+    "Submodel test": function (test) {
+        var SM = new VeryLevelModel({name: {}}, {db: db, prefix: 'submodel'});
+        var PM = new VeryLevelModel({name: {}, thing: {foreignKey: SM}}, {db: db, prefix: 'parentmodel'});
+        var sm = SM.create({name: 'derp'});
+        sm.save(function (err) {
+            var pm = PM.create({name: 'herp', thing: sm});
+            pm.save(function (err) {
+                test.ok(pm.toJSON().thing !== 'object');
+                PM.load(pm.key, function (err, pm2) {
+                    test.ok(pm2.thing.name === 'derp');
+                    test.done();
+                });
+            });
+        });
+    },
 };

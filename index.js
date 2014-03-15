@@ -101,7 +101,11 @@ function makeModelLevely(mf) {
                     var out = [];
                     if (Array.isArray(list)) {
                         for (var lidx in list) {
-                            out.push(list[lidx].key);
+                            if (typeof list[lidx] === 'object') {
+                                out.push(list[lidx].key);
+                            } else {
+                                out.put(list[lidx]);
+                            }
                         }
                     }
                     return out;
@@ -466,9 +470,11 @@ function makeModelLevely(mf) {
     mf.findByIndex = function (field, value, opts, callback) {
         opts = handleOpts('Factory.findByIndex', opts, callback);
         opts.limit = 1;
-        mf.getByIndex.call(this, field, value, opts, function (err, results) {
+        mf.getByIndex(field, value, {db: opts.db, bucket: opts.bucket}, function (err, results) {
             if (Array.isArray(results) && results.length > 0) {
                 results = results[0];
+            } else {
+                results = undefined;
             }
             opts.cb(err, results);
         });

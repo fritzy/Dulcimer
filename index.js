@@ -68,7 +68,8 @@ function makeModelLevely(mf) {
 
     var bin_indexes = [];
     var int_indexes = [];
-    var submodel_fields = [];
+    var foreignkey_fields = [];
+    var collection_fields = [];
 
     var def_fields = Object.keys(mf.definition);
 
@@ -83,13 +84,27 @@ function makeModelLevely(mf) {
                 int_indexes.push(def_fields[fidx]);
             }
             if (def.hasOwnProperty('foreignKey')) {
-                submodel_fields.push(field);
+                foreignkey_fields.push(field);
                 def.processOut = function (value) {
                     if (value) {
                         return value.key;
                     } else {
                         return value;
                     }
+                };
+                newdef = {};
+                newdef[field] = def;
+                mf.addDefinition(newdef);
+            } else if (def.hasOwnProperty('foreignCollection')) {
+                collection_fields.push(field);
+                def.processOut = function (list) {
+                    var out = [];
+                    if (Array.isArray(list)) {
+                        for (var lidx in list) {
+                            out.push(list[lidx].key);
+                        }
+                    }
+                    return out;
                 };
                 newdef = {};
                 newdef[field] = def;
@@ -149,20 +164,50 @@ function makeModelLevely(mf) {
             if (!err) {
                 obj = mf.create(result);
                 obj.key = key;
-                if (submodel_fields.length > 0 && opts.depth > 0) {
-                    async.each(submodel_fields,
-                        function (field, ecb) {
-                            mf.definition[field].foreignKey.load(result[field], {db: opts.db, depth: opts.depth - 1}, function (err, subresult) {
-                                obj[field] = subresult;
-                                ecb(err);
-                            });
-                        },
-                        function (err) {
-                            opts.cb(err, obj);
-                        });
-                } else {
+                async.waterfall(
+                    [function (wcb) {
+                        if (foreignkey_fields.length > 0 && opts.depth > 0) {
+                            async.each(foreignkey_fields,
+                            function (field, ecb) {
+                                mf.definition[field].foreignKey.load(result[field], {db: opts.db, depth: opts.depth - 1}, function (err, subresult) {
+                                    obj[field] = subresult;
+                                    ecb(err);
+                                });
+                            },
+                            wcb);
+                        } else {
+                            wcb();
+                        }
+                    },
+                    function (wcb) {
+                        if (collection_fields.length > 0 && opts.depth > 0) {
+                            var collection = [];
+                            async.each(collection_fields,
+                            function (field, ecb) {
+                                if (Array.isArray(result[field])) {
+                                    async.each(result[field],
+                                    function (key, acb) {
+                                        mf.definition[field].foreignCollection.load(key, {db: opts.db, depth: opts.depth - 1}, function (err, subresult) {
+                                            collection.push(subresult);
+                                            acb(err);
+                                        });
+                                    },
+                                    function (err) {
+                                        obj[field] = collection;
+                                        ecb(err);
+                                    });
+                                } else {
+                                    ecb();
+                                }
+                            },
+                            wcb);
+                        } else {
+                            wcb();
+                        }
+                    }],
+                function (err) {
                     opts.cb(err, obj);
-                }
+                });
             } else {
                 opts.cb(err);
             }

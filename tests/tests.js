@@ -415,4 +415,22 @@ module.exports = {
             });
         });
     },
+    "Collection Test": function (test) {
+        var SM = new VeryLevelModel({name: {}}, {db: db, prefix: 'submodel'});
+        var PM = new VeryLevelModel({name: {}, stuff: {foreignCollection: SM}}, {db: db, prefix: 'parentmodel'});
+        var sm = SM.create({name: 'derp'});
+        sm.save(function (err) {
+            var  sm2 = SM.create({name: 'lerp'});
+            sm2.save(function (err) {
+                var pm = PM.create({name: 'no more', stuff: [sm, sm2]});
+                pm.save(function (err) {
+                    PM.load(pm.key, function (err, pm2) {
+                        test.ok(pm2.stuff[0].name === 'derp');
+                        test.ok(pm2.stuff[1].name === 'lerp');
+                        test.done();
+                    });
+                });
+            });
+        });
+    },
 };

@@ -58,10 +58,10 @@ function makeModelLevely(mf) {
                 value += this.keyname;
                 return value;
             },
-            private: true,
+            private: !mf.options.includeKey,
         },
         keyname: {
-            private: true
+            private: !mf.options.includeKey,
         },
     });
 
@@ -117,16 +117,15 @@ function makeModelLevely(mf) {
         if (opts.db.isClosed()) {
             mf.options.db = opts.db = mf.getBucketDB(mf.options.bucket || 'defaultbucket');
         }
+        if (typeof opts.depth === 'undefined') {
+            opts.depth = 5;
+        }
         return opts;
     }
 
     mf.load = function (key, opts, callback) {
         //if this isn't a child and the user didn't include the prefix, add it
         opts = handleOpts('Factory.get', opts, callback);
-
-        if (typeof opts.depth === 'undefined') {
-            opts.depth = 1;
-        }
 
         if (typeof key === 'undefined') {
             throw new Error("key cannot be undefined for get/load in " + mf.options.prefix);
@@ -253,7 +252,7 @@ function makeModelLevely(mf) {
             opts.db.get(keylib.joinSep(mf, '__total__', mf.options.prefix), {valueEncoding: 'utf8'}, function (err, cnt) {
                 async.each(objects, 
                 function (object, ecb) {
-                    object._loadForeign(opts.db, 1, function (err, object) {
+                    object._loadForeign(opts.db, opts.depth, function (err, object) {
                         newobjects.push[object];
                         ecb();
                     });
@@ -331,7 +330,7 @@ function makeModelLevely(mf) {
                         var inst;
                         data.key = key;
                         inst = mf.create(data);
-                        inst._loadForeign(opts.db, 1, function (err, obj) {
+                        inst._loadForeign(opts.db, opts.depth, function (err, obj) {
                             results.push(obj);
                             acb();
                         });
@@ -399,7 +398,7 @@ function makeModelLevely(mf) {
                         var inst;
                         data.key = key;
                         inst = mf.create(data);
-                        inst._loadForeign(opts.db, 1, function (err, obj) {
+                        inst._loadForeign(opts.db, opts.depth, function (err, obj) {
                             results.push(obj);
                             acb();
                         });
@@ -803,7 +802,7 @@ function makeModelLevely(mf) {
                 var countkey = keylib.joinChild(mf, keylib.joinSep(mf, '__total__', '__child__', this.key), factory.options.prefix);
                 var newobjs = [];
                 async.each(objects, function (object, ecb) {
-                    object._loadForeign(opts.db, 1, function (err, obj) {
+                    object._loadForeign(opts.db, opts.depth, function (err, obj) {
                         newobjs.push(obj);
                         ecb();
                     });
@@ -818,7 +817,8 @@ function makeModelLevely(mf) {
         getChildrenByIndex: function (factory, field, value, opts, callback) {
             var prefix = keylib.joinChild(mf, keylib.joinSep(mf, '__child__', this.key), factory.options.prefix);
             opts = handleOpts(mf.options.prefix + 'getChildrenByIndex', opts, callback);
-            factory.getByIndex(field, value, {keyfilter: prefix}, opts.cb);
+            opts.keyfilter = prefix;
+            factory.getByIndex(field, value, opts, opts.cb);
         },
     });
     return mf;

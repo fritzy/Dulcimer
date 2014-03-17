@@ -552,9 +552,9 @@ function makeModelLevely(mf) {
                 },
                 function (wcb) {
                     if (collection_fields.length > 0 && depth > 0) {
-                        var collection = [];
                         async.each(collection_fields,
                         function (field, ecb) {
+                            var collection = [];
                             if (Array.isArray(obj[field])) {
                                 async.each(obj[field],
                                 function (key, acb) {

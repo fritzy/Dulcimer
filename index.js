@@ -85,34 +85,8 @@ function makeModelLevely(mf) {
             }
             if (def.hasOwnProperty('foreignKey')) {
                 foreignkey_fields.push(field);
-                def.processOut = function (value) {
-                    if (value) {
-                        return value.key;
-                    } else {
-                        return value;
-                    }
-                };
-                newdef = {};
-                newdef[field] = def;
-                mf.addDefinition(newdef);
             } else if (def.hasOwnProperty('foreignCollection')) {
                 collection_fields.push(field);
-                def.processOut = function (list) {
-                    var out = [];
-                    if (Array.isArray(list)) {
-                        for (var lidx in list) {
-                            if (typeof list[lidx] === 'object') {
-                                out.push(list[lidx].key);
-                            } else {
-                                out.put(list[lidx]);
-                            }
-                        }
-                    }
-                    return out;
-                };
-                newdef = {};
-                newdef[field] = def;
-                mf.addDefinition(newdef);
             }
         }
     })();
@@ -131,7 +105,7 @@ function makeModelLevely(mf) {
         }
         if (opts.bucket) {
             opts.db = mf.getBucketDB(opts.bucket);
-        } else {
+        } else if (!opts.db) {
             opts.db = mf.options.db;
         }
         if (typeof opts.cb !== 'function') {
@@ -168,50 +142,7 @@ function makeModelLevely(mf) {
             if (!err) {
                 obj = mf.create(result);
                 obj.key = key;
-                async.waterfall(
-                    [function (wcb) {
-                        if (foreignkey_fields.length > 0 && opts.depth > 0) {
-                            async.each(foreignkey_fields,
-                            function (field, ecb) {
-                                mf.definition[field].foreignKey.load(result[field], {db: opts.db, depth: opts.depth - 1}, function (err, subresult) {
-                                    obj[field] = subresult;
-                                    ecb(err);
-                                });
-                            },
-                            wcb);
-                        } else {
-                            wcb();
-                        }
-                    },
-                    function (wcb) {
-                        if (collection_fields.length > 0 && opts.depth > 0) {
-                            var collection = [];
-                            async.each(collection_fields,
-                            function (field, ecb) {
-                                if (Array.isArray(result[field])) {
-                                    async.each(result[field],
-                                    function (key, acb) {
-                                        mf.definition[field].foreignCollection.load(key, {db: opts.db, depth: opts.depth - 1}, function (err, subresult) {
-                                            collection.push(subresult);
-                                            acb(err);
-                                        });
-                                    },
-                                    function (err) {
-                                        obj[field] = collection;
-                                        ecb(err);
-                                    });
-                                } else {
-                                    ecb();
-                                }
-                            },
-                            wcb);
-                        } else {
-                            wcb();
-                        }
-                    }],
-                function (err) {
-                    opts.cb(err, obj);
-                });
+                obj._loadForeign(opts.db, opts.depth, opts.cb);
             } else {
                 opts.cb(err);
             }
@@ -318,8 +249,18 @@ function makeModelLevely(mf) {
             opts.cb(err, null);
         });
         stream.on('close', function () {
+            var newobjects = [];
             opts.db.get(keylib.joinSep(mf, '__total__', mf.options.prefix), {valueEncoding: 'utf8'}, function (err, cnt) {
-                opts.cb(err, objects, {count: count, offset: opts.offset || 0, limit: opts.limit || -1, total: parseInt(cnt, 10)});
+                async.each(objects, 
+                function (object, ecb) {
+                    object._loadForeign(opts.db, 1, function (err, object) {
+                        newobjects.push[object];
+                        ecb();
+                    });
+                },
+                function (err) {
+                    opts.cb(err, objects, {count: count, offset: opts.offset || 0, limit: opts.limit || -1, total: parseInt(cnt, 10)});
+                });
             });
         });
     };
@@ -387,9 +328,13 @@ function makeModelLevely(mf) {
                 var results = [];
                 async.eachSeries(keys, function (key, acb) {
                     opts.db.get(key, function (err, data) {
+                        var inst;
                         data.key = key;
-                        results.push(mf.create(data));
-                        acb();
+                        inst = mf.create(data);
+                        inst._loadForeign(opts.db, 1, function (err, obj) {
+                            results.push(obj);
+                            acb();
+                        });
                     });
                 }, function (cerr) {
                     opts.db.get(keylib.joinSep(mf, '__total__', prefix), function (err, total) {
@@ -451,9 +396,13 @@ function makeModelLevely(mf) {
                 var results = [];
                 async.eachSeries(keys, function (key, acb) {
                     opts.db.get(key, function (err, data) {
+                        var inst;
                         data.key = key;
-                        results.push(mf.create(data));
-                        acb();
+                        inst = mf.create(data);
+                        inst._loadForeign(opts.db, 1, function (err, obj) {
+                            results.push(obj);
+                            acb();
+                        });
                     });
                 }, function (cerr) {
                     opts.db.get(keylib.joinSep(mf, '__total__', '__index_value__', prefix, value), function (err, total) {
@@ -498,6 +447,29 @@ function makeModelLevely(mf) {
             }
             return prefix;
         },
+        toJSONKeys: function () {
+            var field, fidx;
+            var out = this.toJSON();
+            for (fidx in foreignkey_fields) {
+                field = foreignkey_fields[fidx];
+                if (typeof out[field] === 'object') {
+                    out[field] = this[field].key;
+                }
+            }
+            for (fidx in collection_fields) {
+                field = collection_fields[fidx];
+                if (Array.isArray(out[field])) {
+                    out[field] = this[field].map(function (obj) {
+                        if (typeof obj === 'object') {
+                            return obj.key;
+                        } else {
+                            return obj;
+                        }
+                    });
+                }
+            }
+            return out;
+        },
         __save: function (opts) {
             var newkey = false;
             async.waterfall([
@@ -513,7 +485,8 @@ function makeModelLevely(mf) {
                 function (key, acb) {
                     //save the key
                     this.key = key;
-                    opts.db.put(this.key, this.toJSON(), acb);
+                    var out = this.toJSONKeys();
+                    opts.db.put(this.key, out, acb);
                 }.bind(this),
                 function (acb) {
                     //incremeent
@@ -552,6 +525,57 @@ function makeModelLevely(mf) {
                 callback.apply(null, arguments);
             }.bind(this);
             savelock.runwithlock(this.__save.bind(this), [opts], this);
+        },
+        _loadForeign: function (db, depth, callback) {
+            var obj = this;
+            async.waterfall(
+                [function (wcb) {
+                    if (foreignkey_fields.length > 0 && depth > 0) {
+                        async.each(foreignkey_fields,
+                        function (field, ecb) {
+                            if (typeof obj[field] !== 'undefined') {
+                                mf.definition[field].foreignKey.load(obj[field], {db: db, depth: depth - 1}, function (err, subresult) {
+                                    obj[field] = subresult;
+                                    ecb(err);
+                                });
+                            } else {
+                                ecb();
+                            }
+                        },
+                        wcb);
+                    } else {
+                        wcb();
+                    }
+                },
+                function (wcb) {
+                    if (collection_fields.length > 0 && depth > 0) {
+                        var collection = [];
+                        async.each(collection_fields,
+                        function (field, ecb) {
+                            if (Array.isArray(obj[field])) {
+                                async.each(obj[field],
+                                function (key, acb) {
+                                    mf.definition[field].foreignCollection.load(key, {db: db, depth: depth - 1}, function (err, subresult) {
+                                        collection.push(subresult);
+                                        acb(err);
+                                    });
+                                },
+                                function (err) {
+                                    obj[field] = collection;
+                                    ecb(err);
+                                });
+                            } else {
+                                ecb();
+                            }
+                        },
+                        wcb);
+                    } else {
+                        wcb();
+                    }
+                }],
+            function (err) {
+                callback(err, obj);
+            });
         },
         _updateIndex: function (db, field, oldikey, prefix, oldvalue, newvalue, callback) {
             async.waterfall([
@@ -777,9 +801,18 @@ function makeModelLevely(mf) {
             });
             stream.on('close', function () {
                 var countkey = keylib.joinChild(mf, keylib.joinSep(mf, '__total__', '__child__', this.key), factory.options.prefix);
-                opts.db.get(countkey, {valueEncoding: 'utf8'}, function (err, cnt) {
-                    opts.cb(err, objects, {count: count, offset: opts.offset || 0, limit: limit, total: parseInt(cnt, 10)});
-                }.bind(this));
+                var newobjs = [];
+                async.each(objects, function (object, ecb) {
+                    object._loadForeign(opts.db, 1, function (err, obj) {
+                        newobjs.push(obj);
+                        ecb();
+                    });
+                },
+                function (err) {
+                    opts.db.get(countkey, {valueEncoding: 'utf8'}, function (err, cnt) {
+                        opts.cb(err, newobjs, {count: count, offset: opts.offset || 0, limit: limit, total: parseInt(cnt, 10)});
+                    }.bind(this));
+                });
             }.bind(this));
         },
         getChildrenByIndex: function (factory, field, value, opts, callback) {

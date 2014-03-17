@@ -10,7 +10,7 @@
   "dependencies": {
     "validator": "~2.1.0",
     "underscore": "^1.6.0",
-    "verymodel": "~1.6.2",
+    "verymodel": "~1.7.0",
     "levelup": "^0.18.2",
     "node-uuid": "~1.4.1",
     "level": "~0.18.0",

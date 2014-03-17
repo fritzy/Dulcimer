@@ -120,6 +120,7 @@ function makeModelLevely(mf) {
         if (typeof opts.depth === 'undefined') {
             opts.depth = 5;
         }
+        opts.prefix = opts.prefix || mf.options.prefix;
         return opts;
     }
 
@@ -216,32 +217,33 @@ function makeModelLevely(mf) {
         var limit = opts.limit || -1;
         var objects = [];
         var err, stream;
+        var start = opts.prefix + (mf.options.sep || '!');
+        var end = opts.prefix + (mf.options.sep || '!') + '~';
         if (opts.reverse) {
             stream = opts.db.createReadStream({
-                end: mf.options.prefix + (mf.options.sep || '!'),
-                start: mf.options.prefix + (mf.options.sep || '!') + '~',
+                end: start,
+                start: end,
                 reverse: opts.reverse
             });
         } else { 
             stream = opts.db.createReadStream({
-                start : mf.options.prefix + (mf.options.sep || '!'),
-                end : mf.options.prefix + (mf.options.sep || '!') + '~',
+                start: start,
+                end: end,
                 reverse: opts.reverse
             });
         }
         stream.on('data', function (entry) {
-            if (entry.key.indexOf(mf.options.childsep || '~') == -1) {
-                if (offset === 0) {
-                    var inst = mf.create(entry.value);
-                    inst.key = entry.key;
-                    objects.push(inst);
-                    count++;
-                    if (limit !== -1 && count >= limit) {
-                        stream.destroy();
-                    }
-                } else {
-                    offset--;
+            if (offset === 0) {
+                var inst = mf.create(entry.value);
+                inst.key = entry.key;
+                if (opts.parent) inst.__verymeta.parent = opts.parent;
+                objects.push(inst);
+                count++;
+                if (limit !== -1 && count >= limit) {
+                    stream.destroy();
                 }
+            } else {
+                offset--;
             }
         });
         stream.on('error', function (err) {
@@ -249,7 +251,7 @@ function makeModelLevely(mf) {
         });
         stream.on('close', function () {
             var newobjects = [];
-            opts.db.get(keylib.joinSep(mf, '__total__', mf.options.prefix), {valueEncoding: 'utf8'}, function (err, cnt) {
+            opts.db.get(keylib.joinSep(mf, '__total__', opts.prefix), {valueEncoding: 'utf8'}, function (err, cnt) {
                 async.each(objects, 
                 function (object, ecb) {
                     object._loadForeign(opts.db, opts.depth, function (err, object) {
@@ -330,6 +332,7 @@ function makeModelLevely(mf) {
                         var inst;
                         data.key = key;
                         inst = mf.create(data);
+                        if (opts.parent) inst.__verymeta.parent = opts.parent;
                         inst._loadForeign(opts.db, opts.depth, function (err, obj) {
                             results.push(obj);
                             acb();
@@ -398,6 +401,7 @@ function makeModelLevely(mf) {
                         var inst;
                         data.key = key;
                         inst = mf.create(data);
+                        if (opts.parent) inst.__verymeta.parent = opts.parent;
                         inst._loadForeign(opts.db, opts.depth, function (err, obj) {
                             results.push(obj);
                             acb();
@@ -759,65 +763,16 @@ function makeModelLevely(mf) {
         },
         getChildren: function (factory, opts, callback) {
             opts = handleOpts(mf.options.prefix + 'getChildren', opts, callback);
-            var count = 0;
-            var offset = opts.offset || 0;
-            var limit = opts.limit || -1;
-            var objects = [];
-            var err, stream;
             var prefix = keylib.joinChild(mf, keylib.joinSep(mf, '__child__', this.key), factory.options.prefix);
-            var prefix_end = prefix + '~';
-            if (opts.reverse) {
-                stream = opts.db.createReadStream({
-                    start : prefix_end,
-                    end : prefix,
-                    reverse: true,
-                });
-            } else {
-                stream = opts.db.createReadStream({
-                    start : prefix,
-                    end : prefix_end,
-                });
-            }
-            stream.on('data', function (entry) {
-                var segs = entry.key.split(factory.childsep || '~');
-                var inst;
-                //if the child is prefixed with this factory's prefix
-                if (offset < 1) {
-                    inst = factory.create(entry.value);
-                    inst.key = entry.key;
-                    inst.__verymeta.parent = this;
-                    objects.push(inst);
-                    count++;
-                } else {
-                    offset--;
-                }
-                if (limit !== -1 && count >= limit) {
-                    stream.destroy();
-                }
-            }.bind(this));
-            stream.on('error', function (err) {
-                opts.cb(err, null);
-            });
-            stream.on('close', function () {
-                var countkey = keylib.joinChild(mf, keylib.joinSep(mf, '__total__', '__child__', this.key), factory.options.prefix);
-                var newobjs = [];
-                async.each(objects, function (object, ecb) {
-                    object._loadForeign(opts.db, opts.depth, function (err, obj) {
-                        newobjs.push(obj);
-                        ecb();
-                    });
-                },
-                function (err) {
-                    opts.db.get(countkey, {valueEncoding: 'utf8'}, function (err, cnt) {
-                        opts.cb(err, newobjs, {count: count, offset: opts.offset || 0, limit: limit, total: parseInt(cnt, 10)});
-                    }.bind(this));
-                });
-            }.bind(this));
+            opts.prefix = prefix;
+            opts.parent = this;
+            factory.all(opts, opts.cb);
         },
         getChildrenByIndex: function (factory, field, value, opts, callback) {
             var prefix = keylib.joinChild(mf, keylib.joinSep(mf, '__child__', this.key), factory.options.prefix);
             opts = handleOpts(mf.options.prefix + 'getChildrenByIndex', opts, callback);
-            opts.keyfilter = prefix;
+            opts.prefix = prefix;
+            opts.parent = this;
             factory.getByIndex(field, value, opts, opts.cb);
         },
     });

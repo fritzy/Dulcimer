@@ -35,6 +35,9 @@ Including the prefix in the key is optional.
 ###delete 
 `delete(key, function (err) { ... })`
 
+###wipe
+`wipe(opts, function (err) { ... })`
+
 ### update
 `update(key, { model values to update }, opts, function (err, modelinstance) { ... })`
 

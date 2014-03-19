@@ -3,6 +3,7 @@ var level = require('level');
 var db = level(__dirname + '/testdb.db', {valueEncoding: 'json', errorIfExists: true});
 var async = require('async');
 var verymodel = require('verymodel');
+var dbstreams = require('../lib/streams');
 
 process.on('uncaughtException', function (err) {
     console.trace();
@@ -431,6 +432,30 @@ module.exports = {
                     });
                 });
             });
+        });
+    },
+    "Wipe test": function (test) {
+        var TM = new VeryLevelModel({idx: {}}, {db: db, prefix: 'wipe'});
+        var cidx = 0;
+        async.whilst(function () {
+            cidx++;
+            return cidx <= 20;
+        },
+        function (acb) {
+            var tm = TM.create({idx: {idx: cidx}});
+            tm.save(function (err) {
+                acb(err);
+            });
+        },
+        function (err) {
+            TM.wipe(function (err) {
+                test.done();
+            });
+        });
+    },
+    "Delete All": function (test) {
+        dbstreams.deleteKeysWithPrefix(db, "", function (err) {
+            test.done();
         });
     },
 };

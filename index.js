@@ -6,6 +6,7 @@ var Padlock    = require('padlock').Padlock;
 var keylib     = require('./lib/keys');
 var underscore = require('underscore');
 var getDBPath  = require('./lib/dbpool');
+var dbstreams = require('./lib/streams');
 
 function makeModelLevely(mf) {
 
@@ -96,7 +97,7 @@ function makeModelLevely(mf) {
         opts.bucket = bucket;
         return new VeryLevelModel(mf.definition, opts);
     };
-    
+
     function handleOpts(name, opts, callback) {
         if (typeof callback === 'undefined') {
             opts = {cb: opts};
@@ -151,6 +152,12 @@ function makeModelLevely(mf) {
     
     mf.get = mf.load;
 
+    mf.joinSep = function () {
+        var args = Array.prototype.slice.call(arguments, 0);
+        args.unshift(mf);
+        return keylib.joinSep.apply(this, args);
+    };
+
     mf.delete = function (key, opts, callback) {
         savelock.runwithlock(function () {
             opts = handleOpts('Factory.delete', opts, callback);
@@ -167,6 +174,39 @@ function makeModelLevely(mf) {
             });
         }.bind(this));
     };
+    
+    mf.wipe = function (opts, callback) {
+        opts = handleOpts('Factory.wipe', opts, callback);
+        async.series([
+            function (scb) {
+                dbstreams.deleteKeysWithPrefix(opts.db, mf.joinSep(mf.options.prefix, undefined), scb);
+            },
+            function (scb) {
+                dbstreams.deleteKeysWithPrefix(opts.db, mf.joinSep('__index__', mf.options.prefix, undefined), scb);
+            },
+            function (scb) {
+                dbstreams.deleteKeysWithPrefix(opts.db, mf.joinSep('__meta__', mf.options.prefix, undefined), scb);
+            },
+            function (scb) {
+                dbstreams.deleteKeysWithPrefix(opts.db, mf.joinSep('__counter__', mf.options.prefix, undefined), scb);
+            },
+            function (scb) {
+                dbstreams.deleteKeysWithPrefix(opts.db, mf.joinSep('__total__', mf.options.prefix, undefined), scb);
+            },
+            function (scb) {
+                dbstreams.deleteKeysWithPrefix(opts.db, mf.joinSep('__child__', mf.options.prefix, undefined), scb);
+            },
+            function (scb) {
+                dbstreams.deleteKeysWithPrefix(opts.db, mf.joinSep('__total__', '__index_value__', mf.options.prefix, undefined), scb);
+            },
+            function (scb) {
+                dbstreams.deleteKeysWithPrefix(opts.db, mf.joinSep('__counter__', '__index_value__', mf.options.prefix, undefined), scb);
+            },
+        ], function (err) {
+            opts.cb(err);
+        });
+    };
+    
 
     mf.update = function (key, updated_fields, opts, callback) {
         savelock.runwithlock(function () {

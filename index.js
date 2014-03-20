@@ -189,7 +189,8 @@ function makeModelLevely(mf) {
                 dbstreams.deleteKeysWithPrefix(opts.db, mf.joinSep('__meta__', mf.options.prefix, undefined), scb);
             },
             function (scb) {
-                dbstreams.deleteKeysWithPrefix(opts.db, mf.joinSep('__counter__', mf.options.prefix, undefined), scb);
+                //counters don't trail with ! so no "undefined" parameter
+                dbstreams.deleteKeysWithPrefix(opts.db, mf.joinSep('__counter__', mf.options.prefix), scb);
             },
             function (scb) {
                 dbstreams.deleteKeysWithPrefix(opts.db, mf.joinSep('__total__', mf.options.prefix, undefined), scb);

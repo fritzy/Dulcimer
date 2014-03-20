@@ -6,7 +6,8 @@ var Padlock    = require('padlock').Padlock;
 var keylib     = require('./lib/keys');
 var underscore = require('underscore');
 var getDBPath  = require('./lib/dbpool');
-var dbstreams = require('./lib/streams');
+var dbstreams  = require('./lib/streams');
+var concat     = require('concat-stream');
 
 function makeModelLevely(mf) {
 
@@ -248,72 +249,101 @@ function makeModelLevely(mf) {
 
     mf.all = function (opts, callback) {
         opts = handleOpts('Factory.all', opts, callback);
-        if (opts.hasOwnProperty('sortBy')) {
-            mf.allSortByIndex(opts.sortBy, opts, callback);
-            return;
-        }
-        var count = 0;
         var offset = opts.offset || 0;
         var limit = opts.limit || -1;
-        var objects = [];
-        var err, stream;
-        var start = opts.prefix + (mf.options.sep || '!');
-        var end = opts.prefix + (mf.options.sep || '!') + '~';
-        if (opts.reverse) {
-            stream = opts.db.createReadStream({
-                end: start,
-                start: end,
-                reverse: opts.reverse
-            });
-        } else { 
-            stream = opts.db.createReadStream({
-                start: start,
-                end: end,
-                reverse: opts.reverse
-            });
+
+        var streamType = 'base';
+        var laststream;
+
+        //if we're sorting by an index...
+        if (opts.hasOwnProperty('sortBy')) {
+            streamType = 'index';
+            opts.index = opts.sortBy;
+        //if we're sorting by an index value...
+        } else if (opts.hasOwnProperty('indexValue')) {
+            streamType = 'index-value';
+            opts.indexValue = String(opts.indexValue);
         }
-        stream.on('data', function (entry) {
-            if (offset === 0) {
-                var inst = mf.create(entry.value);
-                inst.key = entry.key;
-                if (opts.parent) inst.__verymeta.parent = opts.parent;
-                objects.push(inst);
-                count++;
-                if (limit !== -1 && count >= limit) {
-                    stream.destroy();
-                }
-            } else {
-                offset--;
+
+        if (streamType === 'index' || streamType === 'index-value') {
+            //if we're looking for an field index, and that field isn't indexed, abort
+            if (mf.definition[opts.index].index !== true && mf.definition[opts.index].index_int !== true) {
+                opts.cb("Field " + opts.index + " is not indexed.");
+                return;
             }
-        });
-        stream.on('error', function (err) {
-            opts.cb(err, null);
-        });
-        stream.on('close', function () {
-            var newobjects = [];
-            opts.db.get(keylib.joinSep(mf, '__total__', opts.prefix), {valueEncoding: 'utf8'}, function (err, cnt) {
-                async.each(objects, 
-                function (object, ecb) {
-                    object._loadForeign(opts.db, opts.depth, function (err, object) {
-                        newobjects.push[object];
-                        ecb();
-                    });
-                },
-                function (err) {
-                    opts.cb(err, objects, {count: count, offset: opts.offset || 0, limit: opts.limit || -1, total: parseInt(cnt, 10)});
+            //if the indexed field is indexed as an int, convert it to base60 for sorting
+            if (mf.definition[opts.index].index_int === true) {
+                opts.indexValue = keylib.base60Fill(opts.indexValue, 10);
+            }
+        }
+
+        if (streamType === 'base') {
+            //read in all of the key and values from prefix -> prefix~
+            laststream = dbstreams.createPrefixEntryReadStream(opts.db, mf.joinSep(opts.prefix, undefined), opts.reverse);
+        } else if (streamType === 'index') {
+            //read all of the index-values of the index
+            laststream = dbstreams.createPrefixEntryReadStream(opts.db, mf.joinSep('__index__', opts.prefix, opts.sortBy, undefined), opts.reverse);
+        } else if (streamType === 'index-value') {
+            //read all of the index-values of a specific value
+            laststream = dbstreams.createPrefixEntryReadStream(opts.db, mf.joinSep('__index__', opts.prefix, opts.index, opts.indexValue, undefined), opts.reverse);
+        }
+
+        //if offset or limit, cull the results
+        if (offset > 0 || limit != -1) {
+            laststream = laststream.pipe(new dbstreams.OffsetCountStream(offset, limit));
+        }
+
+        //if we got the values from an index stream, we need to load the actual entries
+        if (streamType === 'index' || streamType === 'index-value') {
+            laststream = laststream.pipe(new dbstreams.KeyValueGetStream(opts.db));
+        }
+
+        //turn results into models
+        laststream = laststream.pipe(new dbstreams.EntryToModelStream(mf, opts.parent));
+ 
+        //if foreign keys, get them for each model
+        if (foreignkey_fields.length > 0 || collection_fields.length > 0) {
+            laststream = laststream.pipe(new dbstreams.OnEachStream(function (inst, next) {
+                inst._loadForeign(opts.db, opts.depth, next);
+            }));
+        }
+
+        //called when all is done
+        function gotTotal(err, total, models) {
+            opts.cb(err, models, {count: models.length, offset: offset, limit: limit, total: total});
+        }
+
+        //if they want the stream rather than results
+        if (opts.returnStream) {
+            opts.cb(undefined, laststream, {offset: offset, limit: limit});
+            return laststream;
+        }
+
+        //concat all of the result into one array
+        laststream.pipe(concat(function (models) {
+            if (streamType === 'base' || streamType === 'index') {
+                //get total for all of the model
+                mf.getTotal({db: opts.db, prefix: opts.prefix}, function (err, total) {
+                    gotTotal(err, total, models);
                 });
-            });
-        });
+            } else {
+                //get total for just this indexed value (streamType == index-value)
+                mf.getIndexTotal(opts.index, opts.indexValue, {db: opts.db, prefix: opts.prefix}, function (err, total) {
+                    gotTotal(err, total, models);
+                });
+            }
+        }));
     };
 
     mf.getTotal = function (opts, callback) {
         opts = handleOpts('Factory.getTotal', opts, callback);
-        opts.db.get(keylib.joinSep(mf, '__total__', mf.options.prefix), {valueEncoding: 'utf8'}, function (err, cnt) {
+        opts.db.get(keylib.joinSep(mf, '__total__', opts.prefix), {valueEncoding: 'utf8'}, function (err, cnt) {
             if (!cnt) cnt = 0;
             cnt = parseInt(cnt, 10);
             opts.cb(null, cnt);
         });
     };
+    
 
     mf.getIndexTotal = function (field, value, opts, callback) {
         opts = handleOpts('Factory.getIndexTotal', opts, callback);
@@ -328,135 +358,15 @@ function makeModelLevely(mf) {
 
     mf.allSortByIndex = function (field, opts, callback) {
         opts = handleOpts('Factory.allSortByIndex', opts, callback);
-        var count = 0;
-        var offset = opts.offset = opts.offset || 0;
-        var limit = opts.limit || -1;
-        var total = 0;
-        var keys = [];
-        var prefix = opts.prefix || mf.options.prefix;
-        var start, end, stream;
-        if (this.definition[field].index === true || this.definition[field].index_int === true) {
-            start = keylib.joinSep(mf, '__index__', prefix, field, undefined);
-            end = keylib.joinSep(mf, '__index__', prefix, field, '~');
-            if (opts.reverse) {
-                stream = opts.db.createReadStream({
-                    end: start,
-                    start: end,
-                    reverse: opts.reverse
-                });
-            } else {
-                stream = opts.db.createReadStream({
-                    start: start,
-                    end: end,
-                    reverse: opts.reverse
-                });
-            }
-            stream.on('data', function (entry) {
-                if (offset > 0) {
-                    offset--;
-                } else {
-                    keys.push(entry.value);
-                    count++;
-                    if (limit !== -1 && count >= limit) {
-                        stream.destroy();
-                    }
-                }
-            });
-            stream.on('error', function (err) {
-                opts.cb(err, null);
-            });
-            stream.on('close', function () {
-                var results = [];
-                async.eachSeries(keys, function (key, acb) {
-                    opts.db.get(key, function (err, data) {
-                        var inst;
-                        data.key = key;
-                        inst = mf.create(data);
-                        if (opts.parent) inst.__verymeta.parent = opts.parent;
-                        inst._loadForeign(opts.db, opts.depth, function (err, obj) {
-                            results.push(obj);
-                            acb();
-                        });
-                    });
-                }, function (cerr) {
-                    opts.db.get(keylib.joinSep(mf, '__total__', prefix), function (err, total) {
-                        total = parseInt(total || 0, 10);
-                        opts.cb(err | cerr, results, {count: count, limit: opts.limit, offset: opts.offset, total: total});
-                    });
-                });
-            });
-        } else {
-            opts.cb("field does not have index");
-        }
+        opts.sortBy = field;
+        mf.all(opts, opts.cb);
     };
 
     mf.getByIndex = function (field, value, opts, callback) {
         opts = handleOpts('Factory.getByIndex', opts, callback);
-        var count = 0;
-        var offset = opts.offset = opts.offset || 0;
-        var limit = opts.limit || -1;
-        var total = 0;
-        var keys = [];
-        var prefix = opts.prefix || mf.options.prefix;
-        var start, end, stream;
-        if (this.definition[field].index === true || this.definition[field].index_int === true) {
-            if (this.definition[field].index_int) {
-                value = keylib.base60Fill(value, 10);
-            } else {
-                value = String(value);
-            }
-            start = keylib.joinSep(mf, '__index__', prefix, field, value, undefined);
-            end = keylib.joinSep(mf, '__index__', prefix, field, value, '~');
-            if (opts.reverse) {
-                stream = opts.db.createReadStream({
-                    end: start,
-                    start: end,
-                    reverse: opts.reverse
-                });
-            } else {
-                stream = opts.db.createReadStream({
-                    start: start,
-                    end: end,
-                    reverse: opts.reverse
-                });
-            }
-            stream.on('data', function (entry) {
-                if (offset > 0) {
-                    offset--;
-                } else {
-                    keys.push(entry.value);
-                    count++;
-                    if (limit !== -1 && count >= limit) {
-                        stream.destroy();
-                    }
-                }
-            });
-            stream.on('error', function (err) {
-                opts.cb(err, null);
-            });
-            stream.on('close', function () {
-                var results = [];
-                async.eachSeries(keys, function (key, acb) {
-                    opts.db.get(key, function (err, data) {
-                        var inst;
-                        data.key = key;
-                        inst = mf.create(data);
-                        if (opts.parent) inst.__verymeta.parent = opts.parent;
-                        inst._loadForeign(opts.db, opts.depth, function (err, obj) {
-                            results.push(obj);
-                            acb();
-                        });
-                    });
-                }, function (cerr) {
-                    opts.db.get(keylib.joinSep(mf, '__total__', '__index_value__', prefix, value), function (err, total) {
-                        total = parseInt(total || 0, 10);
-                        opts.cb(false, results, {count: count, limit: opts.limit, offset: opts.offset, total: total});
-                    });
-                });
-            });
-        } else {
-            opts.cb("field does not have index");
-        }
+        opts.index = field;
+        opts.indexValue = value;
+        mf.all(opts, opts.cb);
     };
     
     mf.findByIndex = function (field, value, opts, callback) {
@@ -517,7 +427,7 @@ function makeModelLevely(mf) {
             var newkey = false;
             async.waterfall([
                 function (acb) {
-                    //generate key
+                    //generate key if we need one
                     if (this.key) {
                         acb(null, this.key);
                     } else {
@@ -532,7 +442,7 @@ function makeModelLevely(mf) {
                     opts.db.put(this.key, out, acb);
                 }.bind(this),
                 function (acb) {
-                    //incremeent
+                    //increment the total
                     var totalkey;
                     if (newkey) {
                         totalkey = this.getPrefix();
@@ -545,6 +455,7 @@ function makeModelLevely(mf) {
                     }
                 }.bind(this),
                 function (acb) {
+                    //update indexes
                     if (int_indexes.length || bin_indexes.length) {
                         this._updateIndexes({bucket: opts.bucket, db: opts.db}, acb);
                     } else {
@@ -553,6 +464,7 @@ function makeModelLevely(mf) {
                 }.bind(this),
             ],
             function (err) {
+                //call onsave and callback
                 if (typeof mf.options.onSave === 'function') {
                     mf.options.onSave.call(this, err, {model: this, changes: this.getChanges(), ctx: opts.ctx, saveOpts: opts}, opts.cb);
                 } else {

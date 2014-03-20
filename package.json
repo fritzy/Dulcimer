@@ -17,7 +17,8 @@
     "async": "~0.2.10",
     "base60": "0.0.1",
     "padlock": "~1.1.2",
-    "leveldown": "^0.10.2"
+    "leveldown": "^0.10.2",
+    "concat-stream": "^1.4.4"
   },
   "devDependencies": {
     "nodeunit": "0.8.1",

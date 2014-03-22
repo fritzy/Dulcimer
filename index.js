@@ -208,7 +208,6 @@ function makeModelLevely(mf) {
             opts.cb(err);
         });
     };
-    
 
     mf.update = function (key, updated_fields, opts, callback) {
         savelock.runwithlock(function () {
@@ -254,6 +253,7 @@ function makeModelLevely(mf) {
         var limit = opts.limit || -1;
 
         var streamType = 'base';
+        //yo dawg, I heard you like streams
         var laststream;
 
         //if we're sorting by an index...
@@ -338,22 +338,19 @@ function makeModelLevely(mf) {
 
     mf.getTotal = function (opts, callback) {
         opts = handleOpts('Factory.getTotal', opts, callback);
-        opts.db.get(keylib.joinSep(mf, '__total__', opts.prefix), {valueEncoding: 'utf8'}, function (err, cnt) {
-            if (!cnt) cnt = 0;
-            cnt = parseInt(cnt, 10);
-            opts.cb(null, cnt);
+        opts.db.get(keylib.joinSep(mf, '__total__', opts.prefix), {valueEncoding: 'utf8'}, function (err, total) {
+            opts.cb(null, parseInt(total || 0, 10));
         });
     };
     
 
     mf.getIndexTotal = function (field, value, opts, callback) {
         opts = handleOpts('Factory.getIndexTotal', opts, callback);
-        opts.db.get(keylib.indexName(mf, field, value, this.definition[field].index_int), function (err, index) {
-            var count = 0;
-            if (!err && index && index.hasOwnProperty(value) && Array.isArray(index[value])) {
-                count = index[value].length;
-            }
-            opts.cb(null, count);
+        if (mf.definition[field].index_int) {
+            value = keylib.base60Fill(value, 10);
+        }
+        opts.db.get(mf.joinSep('__total__', '__index_value__', opts.prefix, field, value), function (err, total) {
+            opts.cb(null, parseInt(total || 0, 10));
         });
     };
 
@@ -387,11 +384,8 @@ function makeModelLevely(mf) {
         getNextKey: function (opts, callback)  {
             var prefix = this.getPrefix();
             incrementKey(opts.db, keylib.joinSep(mf, '__counter__', prefix), 1, function (err, ctr) {
-                var value;
-                value = base60.encode(ctr);
-                value = '00000000'.slice(0, 8 - value.length) + value;
-                value = keylib.joinSep(mf, prefix, value);
-                callback(err, value);
+                var newkey = keylib.joinSep(mf, prefix, keylib.base60Fill(ctr, 8));
+                callback(err, newkey);
             }.bind(this));
         },
         getPrefix: function () {
@@ -401,9 +395,10 @@ function makeModelLevely(mf) {
             }
             return prefix;
         },
-        toJSONKeys: function () {
+        prepJSON: function () {
             var field, fidx;
-            var out = this.toJSON();
+            var out = this.toJSON({withPrivate: mf.options.savePrivate});
+            var fields = Object.keys(out);
             for (fidx in foreignkey_fields) {
                 field = foreignkey_fields[fidx];
                 if (typeof out[field] === 'object') {
@@ -422,6 +417,11 @@ function makeModelLevely(mf) {
                     });
                 }
             }
+            for (fidx in fields) {
+                if (mf.definition[fields[fidx]].save === false) {
+                    delete out[field];
+                }
+            }
             return out;
         },
         __save: function (opts) {
@@ -432,28 +432,18 @@ function makeModelLevely(mf) {
                     if (this.key) {
                         acb(null, this.key);
                     } else {
-                        newkey = true;
-                        this.getNextKey(opts, acb);
+                        this.getNextKey(opts, function (kerr, key) {
+                            incrementKey(opts.db, keylib.joinSep(mf, '__total__', this.getPrefix()), 1, function (err, ctr) {
+                                acb(kerr, key);
+                            });
+                        }.bind(this));
                     }
                 }.bind(this),
                 function (key, acb) {
                     //save the key
                     this.key = key;
-                    var out = this.toJSONKeys();
+                    var out = this.prepJSON();
                     opts.db.put(this.key, out, acb);
-                }.bind(this),
-                function (acb) {
-                    //increment the total
-                    var totalkey;
-                    if (newkey) {
-                        totalkey = this.getPrefix();
-                        totalkey = keylib.joinSep(mf, '__total__', totalkey);
-                        incrementKey(opts.db, totalkey, 1, function (err, ctr) {
-                            acb();
-                        });
-                    } else {
-                        acb();
-                    }
                 }.bind(this),
                 function (acb) {
                     //update indexes

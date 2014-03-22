@@ -178,6 +178,17 @@ The prefix and seperators are used for `all()` and `getChildren()` and related f
 
 Indexes can be declared in a field definition with `index: true` or `index_int: true`.
 
+## Field Filtering
+
+By default, fields marked `private: true` will not be saved, but you can override that with `factory.options.savePrivate = true` You can seperately mark fields as not saved in the field definition with `save: false`.
+
+These destinctions are useful for things like password fields that you wouldn't want to be exposed to an API with toJSON, but do want to save.
+
+## Foreign Keys and Collections
+
+You can refer to foreign objects, and have them load automatically with an object by with foreignKey and foreignCollection field defintions. They should point to another VeryLevelModel Factory.
+
+While recursive loading happens automatically, only the keys of the sub-objects are saved on save(). If you've changed fields in the foreign objects, you must save those directly.
 
 ## 
 

@@ -434,6 +434,22 @@ module.exports = {
             });
         });
     },
+    "Bad Foreign Key": function (test) {
+        var TMa = new VeryLevelModel({idx: {}}, {db: db, prefix: 'bfka'});
+        var TM = new VeryLevelModel({idx: {}, other_id: {foreignKey: TMa, default: {}}, other_col: {foreignCollection: TMa, default: 'lkjsdf'}}, {db: db, prefix: 'bfkb'});
+        var tm = TM.create({idx: 'ham'});
+        tm.save(function (err) {
+            TM.load(tm.key, function (err, tm2) {
+                test.done();
+            });
+        });
+    },
+    "Bad Load": function (test) {
+        var TM = new VeryLevelModel({idx: {}}, {db: db, prefix: 'BL'});
+        TM.load({}, function (err, tm) {
+            test.done();
+        });
+    },
     "Wipe test": function (test) {
         var TM = new VeryLevelModel({idx: {}}, {db: db, prefix: 'wipe'});
         var cidx = 0;

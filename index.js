@@ -134,6 +134,10 @@ function makeModelLevely(mf) {
             throw new Error("key cannot be undefined for get/load in " + mf.options.prefix);
         } else if (typeof key === 'number') {
             key = keylib.joinSep(mf, mf.options.prefix, base60.encode(key));
+        } 
+        if (typeof key !== 'string') {
+            opts.cb("Invalid key type");
+            return;
         }
 
         if (keylib.getLastChildPrefix(mf, key) !== this.options.prefix) {
@@ -479,7 +483,7 @@ function makeModelLevely(mf) {
                     if (foreignkey_fields.length > 0 && depth > 0) {
                         async.each(foreignkey_fields,
                         function (field, ecb) {
-                            if (typeof obj[field] !== 'undefined') {
+                            if (typeof obj[field] === 'string') {
                                 mf.definition[field].foreignKey.load(obj[field], {db: db, depth: depth - 1}, function (err, subresult) {
                                     obj[field] = subresult;
                                     ecb(err);

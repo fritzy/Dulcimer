@@ -1,10 +1,127 @@
-#verymodel-level
+#VeryModel-Level
 
-This module extends [VeryModel](https://github.com/fritzy/verymodel) as `VeryLevelModel` to add methods to model factories and instances for saving and loading in leveldb.
+VeryModel-Level is an ORM for an embedded keystore in your Node.js app.
 
-Please refer to the [VeryModel documentation](https://github.com/fritzy/verymodel) to understand how models themselves behave.
+Features Include:
+
+* Sorted entries
+* Lookup by Index
+* Retrieving Models sorted by Index
+* Foreign Keys and Foreign Collections
+* Children
+* Pagination
+* Counts
+* Buckets
+* onSave & onDelete Model Events
+
+The models in this ORM use  [VeryModel](https://github.com/fritzy/verymodel) so Verymodel-level extends the definitions and methods.
+
+## A Quick Example
+
+    var VeryLevelModel = requrie('verymodel-level');
+    var levelup = require('levelup');
+    var db = levelup('./test.db');
+
+    var PersonFactory = new VeryLevelModel({
+        firstName: {},
+        lastName: {},
+        fullName: {derive: function () {
+            return this.firstName + ' ' + this.lastName;
+        }},
+    }, {db: db, prefix: 'person'});
+
+    var nathan = PersonFactory.create({
+        firstName: 'Nathan',
+        lastName: 'Fritz',
+    });
+    nathan.save(function (err) {
+        PersonFactory.all(function (err, persons) {
+            persons.forEach(function (person) {
+                console.dir(person.toJSON());
+            });
+        });
+    });
+
+## Index
+
+* [Installing](#installing)
+* [Definingin a Model](#defining)
+* [Options and Callbacks](#optionsandcallbacks)
+* [Model Factory Methods](#modelfactorymethods)
+* [Model Instance Methods](#modelinstancemethods)
+
+<a name="installing" />
+## Installing
+`npm install verymodel-level`
+
+<a name="defining" />
+## Defining a Model Factory
+Model Factories define the platonic model, and can create model instances.
+These models are extensions on [VeryModel](https://github.com/fritzy/verymodel).
+Creating a new model factory involves passing two arguments: an object describing each field, and an options object defining the configuration of the model (leveldb path, model name, etc).
+
+### Model Definitions
+
+Every root property of a model definition is a field name.
+
+TODO .... specifics
+
+### Model Options
+
+* name: String name of model
+* db: levelup or levelup compatible instance database
+* dbdir: automatically create leveldb files in this directory
+* bucket: name of bucket
+
+Requirements:
+
+* Models must have a name option.
+* Models may have a db or a dbdir.
+* Models may have a bucket. You may also define buckets elsewhere if dynamic.
+
+Examples:
+
+```js
+{
+    name: 'person',
+    db: levelup(__dirname + '/thisapp.db'),
+}
+```
+```js
+{
+    name: 'person',
+    dbdir: __dirname + '/database/',
+    bucket: 'hampeople',
+}
+```
+
+Buckets are useful for seperating groups of data by access groups or other things.
+
+## Options and Callbacks
+
+Most Model Factory and Model Instance methods require a callback.
+Any method that does require a callback has an optional `options` object as the argument before the callback.
+
+Most methods will take `db`, and `bucket` as properties.
+Some methods will take pagination methods: `offset` and `limit`.
 
 ## Factory Methods
+
+* [get](#get)
+* [all](#all)
+* [update](#update)
+* [delete](#delete)
+* [wipe](#wipe)
+* [getByIndex](#getByIndex)
+* [findByIndex](#findByIndex)
+* [bucket](#bucket)
+
+## Instance Methods
+
+* [save](#save)
+* [createChild](#createChild)
+* [getChildren](#getChildren)
+* [getChildrenByIndex](#getChildrenByIndex)
 
 ### bucket
 

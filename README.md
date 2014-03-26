@@ -1,4 +1,4 @@
-#VeryModel-Level
+#Dulcimer DB
 
 VeryModel-Level is an ORM for an embedded keystore in your Node.js app.
 
@@ -72,6 +72,8 @@ TODO .... specifics
 * db: levelup or levelup compatible instance database
 * dbdir: automatically create leveldb files in this directory
 * bucket: name of bucket
+* onSave: -- function
+* onDelete --
 
 Requirements:
 
@@ -102,8 +104,11 @@ Buckets are useful for seperating groups of data by access groups or other thing
 Most Model Factory and Model Instance methods require a callback.
 Any method that does require a callback has an optional `options` object as the argument before the callback.
 
-Most methods will take `db`, and `bucket` as properties.
+Most methods will take `db`, and `bucket` as options properties, which override the defaults set in `factory.options`.
 Some methods will take pagination methods: `offset` and `limit`.
+`save`, `update`, and `delete` methods can take a `ctx` object in options to pass on to the `factory.options.onSave` and `factory.options.onDelete` callbacks.
+
+Callbacks are always required on functions that include them, and lead with an error-first approach.
 
 ## Model Factory Methods
 
@@ -146,6 +151,8 @@ person.save(function (err) {
 });
 ```
 
+----
+
 <a name="get"></a>
 __get(key, options, callback)__
 
@@ -172,6 +179,7 @@ Person.get(someperson_key, {depth: 0}, function (err, person) {
     }
 });
 ```
+----
 
 <a name="all"></a>
 __all(options, callback)__
@@ -196,23 +204,121 @@ Options:
 * limit: integer limit of results (pagination)
 * returnStream: boolean (default false) returns stream of objects rather than using callback (callback is also called with stream instead of array)
 
+----
+
 <a name="update"></a>
 __update(key, merge_object, options, callback)__
+
+Updates an existing stored model with new data.
+It only overrides fields that you send.
+
+Arguments:
+
+* key
+* merge\_object
+* options
+* callback -- `function (err, newmodel) {}`
+
+Options:
+
+* db: levelup instance
+* bucket: bucket name
+* ctx: context object to send to `factory.options.onSave` upon success
+
+----
 
 <a name="factory-delete"></a>
 __delete(key, options, callback)__
 
+Deletes a stored model.
+
+Arguments:
+
+* key
+* options
+* callback -- `function (err) {}`
+
+Options:
+
+* db: levelup instance
+* bucket: bucket name
+
+----
+
 <a name="wipe"></a>
 __wipe(options, callback)__
 
+Deletes all models and their children from the database.
+
+Arguments:
+
+* options
+* callback -- `function (err) {}`
+
+Options:
+
+* db: levelup instance
+* bucket: bucket name
+
+-----
+
 <a name="getByIndex"></a>
-__getByIndex(field, options, callback)__
+__getByIndex(field, value, options, callback)__
+
+Gets the models by an index.
+
+Arguments: 
+
+* field -- indexed field
+* value -- value to match
+* options
+* callback -- `function (err, models, pagination) { }`
+
+`models` in callback is an array of model instances unless returnStream is true in options.
+
+Options:
+
+* db: levelup instance
+* bucket: bucket name
+* depth: integer depth to recursively resolve foreign objects (default 5)
+* offset: integer to offset results by (pagination)
+* limit: integer limit of results (pagination)
+* returnStream: boolean (default false) returns stream of objects rather than using callback (callback is also called with stream instead of array)
+
+This ends up calling [all](#all) with some index options, so you get the same pagination features.
+
+-----
 
 <a name="findByIndex"></a>
-__findByIndex(field, options, callback)__
+__findByIndex(field, value, options, callback)__
+
+Just like [getByIndex](#getByIndex), except only return one value, rather than an array of models, or an error.
+
+Arguments:
+
+* field -- indexed field
+* value -- value to match
+* options
+* callback -- `function (err, models, pagination) { }`
+
+`models` in callback is an array of model instances unless returnStream is true in options.
+
+Options:
+
+* db: levelup instance
+* bucket: bucket name
+* depth: integer depth to recursively resolve foreign objects (default 5)
+------
 
 <a name="bucket"></a>
 __bucket(name)__
+
+Returns a new Factory, set up for the bucket named.
+Factory.options.dbdir must be set.
+
+Arguments:
+
+* name -- bucket name
 
 
 ## Model Instance Methods
@@ -229,6 +335,35 @@ __bucket(name)__
 * [getChanges](#getChanges)
 * [getOldModel](#getOldModel)
 * [loadData](#loadData)
+
+<a name="save"></a>
+__save(options, callback)__
+
+----
+
+
+<a name="save"></a>
+__save(options, callback)__
+
+----
+
+
+<a name="save"></a>
+__save(options, callback)__
+
+----
+
+
+<a name="save"></a>
+__save(options, callback)__
+
+----
+
+
+<a name="save"></a>
+__save(options, callback)__
+
+----
 
 ### bucket
 

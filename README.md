@@ -4,7 +4,7 @@ VeryModel-Level is an ORM for an embedded keystore in your Node.js app.
 
 Features Include:
 
-* Sorted entries
+* Ordered Objects
 * Lookup by Index
 * Retrieving Models sorted by Index
 * Foreign Keys and Foreign Collections
@@ -18,43 +18,43 @@ The models in this ORM use  [VeryModel](https://github.com/fritzy/verymodel) so 
 
 ## A Quick Example
 
-    var VeryLevelModel = requrie('verymodel-level');
-    var levelup = require('levelup');
-    var db = levelup('./test.db');
+```js
+var VeryLevelModel = requrie('verymodel-level');
+var levelup = require('levelup');
+var db = levelup('./test.db');
 
-    var PersonFactory = new VeryLevelModel({
-        firstName: {},
-        lastName: {},
-        fullName: {derive: function () {
-            return this.firstName + ' ' + this.lastName;
-        }},
-    }, {db: db, prefix: 'person'});
+var PersonFactory = new VeryLevelModel({
+    firstName: {},
+    lastName: {},
+    fullName: {derive: function () {
+        return this.firstName + ' ' + this.lastName;
+    }},
+}, {db: db, prefix: 'person'});
 
-    var nathan = PersonFactory.create({
-        firstName: 'Nathan',
-        lastName: 'Fritz',
-    });
-    nathan.save(function (err) {
-        PersonFactory.all(function (err, persons) {
-            persons.forEach(function (person) {
-                console.dir(person.toJSON());
-            });
+var nathan = PersonFactory.create({
+    firstName: 'Nathan',
+    lastName: 'Fritz',
+});
+nathan.save(function (err) {
+    PersonFactory.all(function (err, persons) {
+        persons.forEach(function (person) {
+            console.dir(person.toJSON());
         });
     });
+});
+```
 
 ## Index
 
 * [Installing](#installing)
-* [Definingin a Model](#defining)
+* [Defining a Model](#defining-a-model-factory)
 * [Options and Callbacks](#optionsandcallbacks)
-* [Model Factory Methods](#modelfactorymethods)
-* [Model Instance Methods](#modelinstancemethods)
+* [Model Factory Methods](#model-factory-methods)
+* [Model Instance Methods](#model-instance-methods)
 
-<a name="installing" />
 ## Installing
 `npm install verymodel-level`
 
-<a name="defining" />
 ## Defining a Model Factory
 Model Factories define the platonic model, and can create model instances.
 These models are extensions on [VeryModel](https://github.com/fritzy/verymodel).
@@ -105,23 +105,130 @@ Any method that does require a callback has an optional `options` object as the 
 Most methods will take `db`, and `bucket` as properties.
 Some methods will take pagination methods: `offset` and `limit`.
 
-## Factory Methods
+## Model Factory Methods
 
+* [create](#create)
 * [get](#get)
 * [all](#all)
 * [update](#update)
-* [delete](#delete)
+* [delete](#factory-delete)
 * [wipe](#wipe)
 * [getByIndex](#getByIndex)
 * [findByIndex](#findByIndex)
 * [bucket](#bucket)
 
-## Instance Methods
+<a name="create"></a>
+__create(value_object)__
+
+Returns a factory instance model.
+
+Create makes a new instance of the model with specific data.
+Any fields in the value\_object that were not defined get thrown out.
+Validations are not done on creation, but some values may be processed based on the field defintion type and processIn functions.
+
+Create does not save the value; you'll have to run `.save(function (err) { ... })` on the returned model instance.
+
+The model instance's private `.key` field will not be set until it has been saved either.
+
+Logging the model out to console will produce a confusing result.
+If you want the model's data, run `.toJSON()` and use the result.
+
+Example:
+
+```js
+//assuming Person is a defined Model Factory
+var person = Person.create({
+    firstName: 'Nathan',
+    lastName: 'Fritz',
+});
+person.save(function (err) {
+    console.log("Person saved as:", person.key);
+});
+```
+
+<a name="get"></a>
+__get(key, options, callback)__
+
+Get a specific model instance by key.
+
+Arguments: 
+
+* key
+* options
+* callback -- `function (err, model)`
+
+Options:
+
+* db: levelup instance
+* bucket: bucket name
+* depth: integer depth to recursively resolve foreign objects (default 5)
+
+Example:
+
+```js
+Person.get(someperson_key, {depth: 0}, function (err, person) {
+    if (!err) {
+        console.dir(person.toJSON());
+    }
+});
+```
+
+<a name="all"></a>
+__all(options, callback)__
+
+Get many/all of the model instances saved of this model factory
+Results are in order of insertion unless ordered by an indexed field.
+
+Arguments:
+
+* options
+* callback -- `function (err, models, pagination) { }`
+
+`models` in callback is an array of model instances unless returnStream is true in options.
+
+Options:
+
+* db: levelup instance
+* bucket: bucket name
+* depth: integer depth to recursively resolve foreign objects (default 5)
+* sortBy: indexed field to results in order of value
+* offset: integer to offset results by (pagination)
+* limit: integer limit of results (pagination)
+* returnStream: boolean (default false) returns stream of objects rather than using callback (callback is also called with stream instead of array)
+
+<a name="update"></a>
+__update(key, merge_object, options, callback)__
+
+<a name="factory-delete"></a>
+__delete(key, options, callback)__
+
+<a name="wipe"></a>
+__wipe(options, callback)__
+
+<a name="getByIndex"></a>
+__getByIndex(field, options, callback)__
+
+<a name="findByIndex"></a>
+__findByIndex(field, options, callback)__
+
+<a name="bucket"></a>
+__bucket(name)__
+
+
+## Model Instance Methods
 
 * [save](#save)
+* [delete](#delete)
 * [createChild](#createChild)
 * [getChildren](#getChildren)
 * [getChildrenByIndex](#getChildrenByIndex)
+* [findChildByIndex](#findChildByIndex)
+* [toJSON](#toJSON)
+* [toString](#toString)
+* [diff](#diff)
+* [getChanges](#getChanges)
+* [getOldModel](#getOldModel)
+* [loadData](#loadData)
 
 ### bucket
 

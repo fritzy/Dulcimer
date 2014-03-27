@@ -9,6 +9,8 @@ var getDBPath  = require('./lib/dbpool');
 var dbstreams  = require('./lib/streams');
 var concat     = require('concat-stream');
 
+var model_cache = {};
+
 function makeModelLevely(mf) {
 
     var savelock = new Padlock();
@@ -483,8 +485,14 @@ function makeModelLevely(mf) {
                     if (foreignkey_fields.length > 0 && depth > 0) {
                         async.each(foreignkey_fields,
                         function (field, ecb) {
+                            var foreignModel;
                             if (typeof obj[field] === 'string') {
-                                mf.definition[field].foreignKey.load(obj[field], {db: db, depth: depth - 1}, function (err, subresult) {
+                                if (typeof mf.definition[field].foreignKey === 'string') {
+                                    foreignModel = model_cache[mf.definition[field].foreignKey];
+                                } else {
+                                    foreignModel = mf.definition[field].foreignKey;
+                                }
+                                foreignModel.load(obj[field], {db: db, depth: depth - 1}, function (err, subresult) {
                                     obj[field] = subresult;
                                     ecb(err);
                                 });
@@ -505,7 +513,13 @@ function makeModelLevely(mf) {
                             if (Array.isArray(obj[field])) {
                                 async.each(obj[field],
                                 function (key, acb) {
-                                    mf.definition[field].foreignCollection.load(key, {db: db, depth: depth - 1}, function (err, subresult) {
+                                    var foreignModel;
+                                    if (typeof mf.definition[field].foreignCollection === 'string') {
+                                        foreignModel = model_cache[mf.definition[field].foreignCollection];
+                                    } else {
+                                        foreignModel = mf.definition[field].foreignCollection;
+                                    }
+                                    foreignModel.load(key, {db: db, depth: depth - 1}, function (err, subresult) {
                                         collection.push(subresult);
                                         acb(err);
                                     });
@@ -723,6 +737,8 @@ function makeModelLevely(mf) {
             factory.getByIndex(field, value, opts, opts.cb);
         },
     });
+
+    model_cache[mf.options.prefix] = mf;
     return mf;
 }
 

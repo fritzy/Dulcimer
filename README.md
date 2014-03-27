@@ -29,7 +29,7 @@ var PersonFactory = new VeryLevelModel({
     fullName: {derive: function () {
         return this.firstName + ' ' + this.lastName;
     }},
-}, {db: db, prefix: 'person'});
+}, {db: db, name: 'person'});
 
 var nathan = PersonFactory.create({
     firstName: 'Nathan',
@@ -48,7 +48,7 @@ nathan.save(function (err) {
 
 * [Installing](#installing)
 * [Defining a Model](#defining-a-model-factory)
-* [Options and Callbacks](#optionsandcallbacks)
+* [Options and Callbacks](#options-and-callbacks)
 * [Model Factory Methods](#model-factory-methods)
 * [Model Instance Methods](#model-instance-methods)
 
@@ -62,9 +62,25 @@ Creating a new model factory involves passing two arguments: an object describin
 
 ### Model Definitions
 
-Every root property of a model definition is a field name.
+Every root property of a model definition is a field name with an object value defining types, restrictions, and processing for a model field. In it's simplest form, a field definition can just be an empty object, and then you can assign anything to that field. If a field isn't mentioned in the defition, it won't be saved or loaded.
 
-TODO .... specifics
+#### Field Definition Properties
+
+__type__
+
+__validate__
+
+__processIn__
+
+__processOut__
+
+__onSet__
+
+__derive__
+
+__foreignKey__
+
+__foreignCollection__
 
 ### Model Options
 
@@ -80,6 +96,9 @@ Requirements:
 * Models must have a name option.
 * Models may have a db or a dbdir.
 * Models may have a bucket. You may also define buckets elsewhere if dynamic.
+
+Note: Multiple models and can should use the same bucket.
+Multile models SHOULD NOT use the same name.
 
 Examples:
 

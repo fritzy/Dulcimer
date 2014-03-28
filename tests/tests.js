@@ -450,6 +450,66 @@ module.exports = {
             test.done();
         });
     },
+    "onSet": function (test) {
+        var TM = new VeryLevelModel({idx: {}, name: {onSet: function (value) {
+            return "cheese";
+        }}}, {db: db, prefix: 'onset'});
+        var tm = TM.create({idx: 1, name: 'ham'});
+        test.equals(tm.name, 'ham');
+        tm.name = 'whatever';
+        test.equals(tm.name, 'cheese');
+        test.done();
+    },
+    "Index Range And Filter": function (test) {
+        var TM = new VeryLevelModel({idx: {}, date: {index: true}}, {db: db, prefix: 'index-range'});
+        var cidx = 0;
+        async.whilst(function () {
+            cidx++;
+            return cidx <= 15;
+        },
+        function (acb) {
+            var tm = TM.create({idx: cidx, date: '2014-02-' + (10 + cidx)});
+            tm.save(function (err) {
+                acb(err);
+            });
+        },
+        function (err) {
+            async.series([
+                function (scb) {
+                    TM.all({index: 'date', indexRange: {start: '2014-02-13', end: '2014-02-17'}}, function (err, tms) {
+                        test.equals(tms[0].date, '2014-02-13');
+                        test.equals(tms[1].date, '2014-02-14');
+                        test.equals(tms[2].date, '2014-02-15');
+                        test.equals(tms[3].date, '2014-02-16');
+                        test.equals(tms[4].date, '2014-02-17');
+                        test.equals(tms.length, 5);
+                        scb();
+                    });
+                },
+                function (scb) {
+                    TM.all({filter: function (tm) {
+                        var day = tm.date.split('-');
+                        day = day[day.length - 1];
+                        if (parseInt(day, 10) % 2 === 0) {
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    }}, function (err, tms) {
+                        test.equals(tms[0].date, '2014-02-12');
+                        test.equals(tms[1].date, '2014-02-14');
+                        test.equals(tms[2].date, '2014-02-16');
+                        test.equals(tms[3].date, '2014-02-18');
+                        test.equals(tms[4].date, '2014-02-20');
+                        scb();
+                    });
+                }
+            ],
+            function (err) {
+                test.done();
+            });
+        });
+    },
     "Wipe test": function (test) {
         var TM = new VeryLevelModel({idx: {}}, {db: db, prefix: 'wipe'});
         var cidx = 0;

@@ -1,4 +1,4 @@
-#Dulcimer DB
+#VeryModel-Level
 
 VeryModel-Level is an ORM for an embedded keystore in your Node.js app.
 

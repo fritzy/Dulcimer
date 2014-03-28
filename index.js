@@ -91,6 +91,8 @@ function makeModelLevely(mf) {
         opts.bucket = bucket;
         return new VeryLevelModel(mf.definition, opts);
     };
+
+    return mf;
 }
 
 

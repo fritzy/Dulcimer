@@ -8,6 +8,8 @@ var base = require('./lib/base');
 var children = require('./lib/children');
 var foreign = require('./lib/foreign');
 
+var model_cache = {};
+
 function makeModelLevely(mf) {
     mf.options.savelock = new Padlock();
 

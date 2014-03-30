@@ -19,7 +19,7 @@ The models in this ORM use  [VeryModel](https://github.com/fritzy/verymodel) so 
 ## A Quick Example
 
 ```js
-var VeryLevelModel = requrie('verymodel-level');
+var VeryLevelModel = require('verymodel-level');
 var levelup = require('levelup');
 var db = levelup('./test.db');
 
@@ -66,21 +66,227 @@ Every root property of a model definition is a field name with an object value d
 
 #### Field Definition Properties
 
+When making a model, you must defined the fields in the model.
+A field definition may be a simple empty `{}` if anything goes.
+
+Most field definition properties that can be functions are called with the model instance as the `this` context.
+
+
+* [type](#def-type)
+* [validate](#def-validate)
+* [processIn](#def-processIn)
+* [processOut](#def-processOut)
+* [onSet](#def-onSet)
+* [derive](#def-derive)
+* [foreignKey](#def-foreignKey)
+* [foreignCollection](#def-foreignCollection)
+
+
+<a name='def_type'></a>
 __type__
 
+A string which references a built in type.
+Built in types include `string`, `array`, `integer`, `numeric`, `enum`, `boolean`.
+Strings and arrays may have `min` and `max` values, both for validation, and max will truncate the results when saving or on `toJSON`.
+Enums may include `values`, an array (and eventually a ECMAScript 6 set).
+
+You can override any of the definition fields of a specified type. Validate, processIn, processOut, and onSet will use both the built-in and your override. The others will replace the definition field.
+
+`type` does not need to be set at all. In fact, `{}` is a perfectly valid definition.
+
+Example:
+
+    {field: {type: 'string', max: 140}}
+
+
+----
+
+<a name='def_validate'></a>
 __validate__
 
+The `validate` field takes a value and should determine whether that value is acceptable or not. It's ran during `doValidate()` or during `save` if you set the option `validateOnSave: true`.
+The function should return a boolean, an array of errors, an empty array, or an error string.
+
+Example:
+
+```js
+new VeryModelLevel({field: {
+    validate: function (value) {
+        //validate on even
+        return (value % 2 === 0);
+    }
+});
+```
+
+----
+
+<a name='def_processIn'></a>
 __processIn__
 
+`processIn` is a function that is passed a value on loading from the database, `create`, or `loadData`. It should return a value.
+
+This function is often paired with `processOut` in order to make an interactive object when in model form, and a serialized form when saved.
+
+`processIn` does not handle the case of direct assignment like `modelinst.field = 'cheese';`. Use `onSet` for this case.
+
+Example:
+
+```javascript
+new VeryLevelModel({someDateField: {
+    processIn: function (value) {
+        return moment(value);
+    },
+})
+```
+
+----
+
+<a name='def_processOut'></a>
 __processOut__
 
+`processOut` is a function that takes a value and returns a value, just like `processIn`, but is typically used to serialize the value for storage. It runs on `save()` and `toJSON()`.
+
+Example:
+
+```javascript
+new VeryLevelModel({someDateField: {
+    processIn: function (value) {
+        return moment(value);
+    },
+})
+```
+
+----
+
+<a name='def_onSet'></a>
 __onSet__
 
+`onSet` is just like `processIn`, except that it only runs on direct assignment. It's a function that takes a value and returns a value.
+
+Example:
+
+```javascript
+new VeryLevelModel({someDateField: {
+    processIn: function (value) {
+        return moment(value);
+    },
+    onSet: function (value) {
+        if (moment.isMoment(value)) {
+            return value;
+        } else {
+            return moment(value);
+        }
+    },
+    processOut: function (value) {
+        return value.format();
+    },
+})
+```
+
+----
+
+<a name='def_derive'></a>
 __derive__
 
+`derive` is a function that returns a value whenever the field is accessed (which can be quite frequent. The `this` context, is the current model instance, so you can access other fields.
+
+Example:
+
+```js
+new VeryLevelModel({
+    firstName: {type: 'string'},
+    lastName: {type: 'string'},
+    fullName: {
+        type: 'string',
+        derive: function () {
+            return [this.firstName, this.lastName].join(" ");
+        },
+    }
+});
+```
+
+----
+
+<a name='def_foreignKey'></a>
 __foreignKey__
 
+`foreignKey` should be a Model Factory or a string of the factory name.
+These fields are saved as their key, but when loaded expanded out to be a model instance of the key's value.
+`get` will load and expand `foreignKey`s and `foreignCollections` up to the `depth` option provided (which is 5 by default).
+
+When assigning values to this field, you can either assign a model instance or a key string.
+
+Example: 
+
+```js
+new VeryLevelModel({
+    comment: {'string'},
+    author: {foreignKey: 'user'},
+});
+```
+
+----
+
+<a name='def_foreignCollection'></a>
 __foreignCollection__
+
+`foreignCollection`'s are like `foreignKey`'s except they are of an array type.
+Values are saved as an array of key strings, and expanded out by when the model is retrieved with `get` up to the default depth of 5 or overriden with `{depth: 24}` on the `get` command.
+
+When assigning values to these fields, you may either assign an array of model instances or an array of key strings.
+
+Example: 
+
+```js
+new VeryLevelModel({
+    comment: {'string'},
+    author: {foreignKey: 'user'},
+    starredBy: {foreignCollection: 'user'}
+});
+```
+
+----
+
+<a name='def_required'></a>
+__required__
+
+`required` is a boolean, false by default.
+A required field will attempt to bring in the `default` value if a value is not present.
+
+Example:
+
+```js
+new VeryLevelModel({
+    comment: {'string',
+        required: true,
+        default: "User has nothing to say."
+    },
+    author: {foreignKey: 'user'},
+    starredBy: {foreignCollection: 'user'}
+});
+```
+
+----
+
+<a name='def_default'></a>
+__default__
+
+`default` may be a value or a function. Default is only brought into play when a field is `required` but not assigned.
+In function form, `default` behaves similiarly to `derive`, except that it only executes once.
+
+```js
+new VeryLevelModel({
+    comment: {'string',
+        required: true,
+        default: function () {
+            return this.author.fullName + ' has nothing to say.';
+        },
+    },
+    author: {foreignKey: 'user'},
+    starredBy: {foreignCollection: 'user'}
+});
+```
+
 
 ### Model Options
 
@@ -198,6 +404,7 @@ Person.get(someperson_key, {depth: 0}, function (err, person) {
     }
 });
 ```
+
 ----
 
 <a name="all"></a>

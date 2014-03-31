@@ -484,6 +484,7 @@ Callbacks are always required on functions that include them, and lead with an e
 * [sortBy](#op-sortBy)
 * [indexValue](#op-indexValue)
 * [indexRange](#op-indexRange)
+* [index](#op-index)
 * [reverse](#op-reverse)
 * [filter](#op-filter)
 * [depth](#op-depth)
@@ -529,6 +530,7 @@ __sortBy__
 __indexValue__
 
 Only get results from this indexed field with a specific value.
+You must also specify the field with [index](#op-index).
 
 ----
 
@@ -539,7 +541,16 @@ Only get the results from this indexed field within a specific range (in order).
 
     {indexRange: {start: 'start value', end: 'end value'}}
 
+You must also specify the field with [index](#op-index).
+
 ----
+
+<a name='op-index'></a>
+__index__
+
+Index field to use for [indexRange](#op-indexRange) and [indexValue](#op-indexValue).
+
+---
 
 <a name='op-reverse'></a>
 __reverse__
@@ -644,13 +655,12 @@ Arguments:
 
 * key
 * options
-* callback -- `function (err, model)`
+* callback: `function (err, model)`
 
 Callback Arguments:
 
 1. __err__: An error indicating failure to get the model instance.
 2. __model__: A model instance of the Model Factory that called get (if there was no err).
-
 
 Options:
 
@@ -693,12 +703,19 @@ Options:
 * [offset](#op-offset)
 * [limit](#op-limit)
 * [sortBy](#op-sortBy)
+* [index](#op-index)
 * [indexValue](#op-indexValue)
 * [indexRange](#op-indexRange)
 * [reverse](#op-reverse)
 * [filter](#op-filter)
 * [depth](#op-depth)
 * [returnStream](#op-returnStream)
+
+:information\_source: Internally, all is called by other methods that retrieve multiple results, doing some of the options for you. For example, getByIndex calls all with [index](#op-index) and [indexValue](#op-indexValue).
+
+Example:
+
+
 
 ----
 

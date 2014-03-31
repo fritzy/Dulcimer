@@ -475,6 +475,9 @@ Some methods will take pagination methods: `offset` and `limit`.
 
 Callbacks are always required on functions that include them, and lead with an error-first approach.
 
+
+:point\_up: Remeber, options are always optional, meaning you don't have to the argument at all.
+
 ### Common Options
 
 * [db](#op-db)
@@ -712,7 +715,7 @@ Options:
 * [returnStream](#op-returnStream)
 
 
-:information\_source: Internally, [all](#all) is called by other methods that retrieve multiple results, doing some of the options for you. For example, [getByIndex](#getByIndex) calls all with [index](#op-index) and [indexValue](#op-indexValue).
+:point\_up: Internally, [all](#all) is called by other methods that retrieve multiple results, doing some of the options for you. For example, [getByIndex](#getByIndex) calls all with [index](#op-index) and [indexValue](#op-indexValue).
 
 Example:
 
@@ -831,7 +834,7 @@ Options:
 * [returnStream](#op-returnStream)
 
 
-:information\_source: This ends up calling [all](#all) with some index options, so you get the same pagination features.
+:point\_up: This ends up calling [all](#all) with some index options, so you get the same pagination features.
 
 ```javascript
 Person.getByIndex('lastName', 'Fritz', function (err, persons) {
@@ -895,20 +898,158 @@ Person.findByIndex('phoneNumber', '509-555-5555', function (err, person) {
 <a name="save"></a>
 __save(options, callback)__
 
+Saves the current model instance to a serialized form in the db.
+
+Fields may be omitted based on the model options [saveKey](#mo-saveKey) & [savePrivate](#mo-savePrivate), and field definition parameters of [private](#def-private) & [save](#def-save).
+
+Any [foreignKey](#def-foreignKey) and [foreignCollection](#def-foreignCollection) fields will be collapsed back down to just their `key` fields.
+
+Any [processOut](#def-processOut) functions will be ran to process the fields into their serialized form.
+
+If the model doesn't already have a `key` field assigned, a new key will be generated.
+
+Arguments:
+
+* options
+* callback: function (err)
+
+Callback Arguments:
+
+1. __err__: Only set if an error occured.
+
+Options:
+
+* [db](#op-db)
+* [bucket](#op-bucket)
+* [ctx](#op-ctx)
+
+
+:heavy\_exclamation\_mark: Foreign objects are not saved.
+
+Example:
+
+```javascript
+var person = Person.create({
+    firstName: 'Nathan',
+    lastName: 'Fritz',
+});
+
+person.save(function (err) {
+    console.log("Person:", person.fullName, "saved as", person.key);
+    //fullName is a derived field
+    //person.key got generated during save
+    //didn't pass options because they're optional, remember?
+});
+```
+
 ----
 
 <a name="instance-delete"></a>
 __delete(options, callback)__
 
+Deletes the instance from the database.
+
+Arguments:
+
+* options
+* callback: `function (err)`
+
+Callback Arguments:
+
+1. __err__: Only set when an error has occured while deleting.
+
+Options:
+
+* [db](#op-db)
+* [bucket](#op-bucket)
+* [ctx](#op-ctx)
+
+Example:
+
+```javascript
+person.delete({ctx:{userid: someuser}}, function (err) {
+    //the model option onDelete was called with the ctx object
+});
+```
+
 ----
 
 <a name="createChild"></a>
-__createChild(otherModelFactory, value_object)__
+__createChild(ModelFactory, value)__
+
+Children are model instances that you can attach to a model instance.
+They're great for revision logs, comments, etc.
+
+* ModelFactory: This can be any VeryLevelModel factory, including the same one as the parent.
+* value: initial value, used just like [create](#create)
+
+Example:
+
+```javascript
+var comment = person.createChild(Comment{
+    body: "I think that guy is pretty great.",
+    author: otherperson,
+});
+comment.save(function (err) {
+    console.log("Comment", comment.key, "added to", person.key);
+});
+```
+
+
+:point\_up: [Comment.all](#all) will not include the children comments. Only this specific person instance can access these comments with [getChildren](#getChildren), [getChildrenByIndex](#getChildrenByIndex), and [findChildByIndex](#findChildByIndex).
+
+
+:point\_up: Deleting the parent object will delete the children.
 
 ----
 
 <a name="getChildren"></a>
-__getChildren(otherModelFactory, options, callback)__
+__getChildren(ModelFactory, options, callback)__
+
+Get the children of this model instance of a specific model factory.
+
+Arguments:
+
+* ModelFactory: This can be any VeryLevelModel factory, including the same one as the parent.
+* options
+* callback `function (err, models, callback)`
+
+Callback Arguments:
+
+1. __err__: If err is set, there has been an error getting result.
+2. __models__: An array of model instances unless the [returnStream option](#op-returnStream) is true, at which point it is an [object stream](http://nodejs.org/api/stream.html#stream_object_mode) of resulting model instances.
+3. __pagination__: An object containing specified [limit](#op-limit), [offset](#op-offset), an actual `count` and potential `total` if no offset/limit had been assigned.
+
+Options:
+
+* [db](#op-db)
+* [bucket](#op-bucket)
+* [offset](#op-offset)
+* [limit](#op-limit)
+* [sortBy](#op-sortBy)
+* [index](#op-index)
+* [indexValue](#op-indexValue)
+* [indexRange](#op-indexRange)
+* [reverse](#op-reverse)
+* [filter](#op-filter)
+* [depth](#op-depth)
+* [returnStream](#op-returnStream)
+
+
+:point\_up: Internally, this method calls [all](#all) with special internal use only options to work with specifically the children on this model instance.
+
+Example:
+
+```javascript
+person.getChildren(Comment, function (err, comments, pagination) {
+    console.log("All of the comments for", person.fullName);
+    console.log("-===============================-");
+    comments.forEach(function (err, comment) {
+        console.log(comment.body);
+        console.log("-", comment.author.fullName);
+    });
+});
+```
 
 ----
 
@@ -950,4 +1091,3 @@ __getOldModel()__
 <a name="loadData"></a>
 __loadData()__
 
-----

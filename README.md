@@ -613,7 +613,6 @@ A boolean, when true, causes a read function to return an object stream, and cal
 * [wipe](#wipe)
 * [getByIndex](#getByIndex)
 * [findByIndex](#findByIndex)
-* [bucket](#bucket)
 
 <a name="create"></a>
 __create(value_object)__
@@ -695,6 +694,7 @@ Callback Arguments:
 
 1. __err__: If err is set, there has been an error getting result.
 2. __models__: An array of model instances unless the [returnStream option](#op-returnStream) is true, at which point it is an [object stream](http://nodejs.org/api/stream.html#stream_object_mode) of resulting model instances.
+3. __pagination__: An object containing specified [limit](#op-limit), [offset](#op-offset), an actual `count` and potential `total` if no offset/limit had been assigned.
 
 Options:
 
@@ -711,11 +711,18 @@ Options:
 * [depth](#op-depth)
 * [returnStream](#op-returnStream)
 
-:information\_source: Internally, all is called by other methods that retrieve multiple results, doing some of the options for you. For example, getByIndex calls all with [index](#op-index) and [indexValue](#op-indexValue).
+
+:information\_source: Internally, [all](#all) is called by other methods that retrieve multiple results, doing some of the options for you. For example, [getByIndex](#getByIndex) calls all with [index](#op-index) and [indexValue](#op-indexValue).
 
 Example:
 
-
+```js
+Person.all({limit: 10}, function (err, persons) {
+    persons.forEach(function (person) {
+        console.log(person.toJSON());
+    });
+});
+```
 
 ----
 
@@ -730,13 +737,26 @@ Arguments:
 * key
 * merge\_object
 * options
-* callback -- `function (err, newmodel) {}`
+* callback -- `function (err, newmodel)`
+
+Callback Arguments:
+
+1. __err__: Only set when there's been an error updating the model.
+2. __newmodel__: The model instance after it's been updated.
 
 Options:
 
 * [db](#op-db)
 * [bucket](#op-bucket)
 * [ctx](#op-ctx)
+
+Example:
+
+```js
+Person.update(somekey, {lastName: 'Fritz'}, {bucket: 'peopleILike'}, function (err, person) {
+    console.log(person.toJSON()); //lastName will be Fritz, other values unchanged
+});
+```
 
 ----
 
@@ -753,8 +773,8 @@ Arguments:
 
 Options:
 
-* db: levelup instance
-* bucket: bucket name
+* [db](#op-db)
+* [bucket](#op-db)
 
 ----
 
@@ -766,12 +786,18 @@ Deletes all models and their children from the database.
 Arguments:
 
 * options
-* callback -- `function (err) {}`
+* callback -- `function (err)`
+
+CallBack Arguments:
+
+1. __err__: Only set if an error occured during wipe.
 
 Options:
 
-* db: levelup instance
-* bucket: bucket name
+* [db](#op-db)
+* [bucket](#op-db)
+
+:heavy\_exclamation\_mark: No really, it deletes everything for that model!
 
 -----
 
@@ -782,23 +808,39 @@ Gets the models by an index.
 
 Arguments: 
 
-* field -- indexed field
-* value -- value to match
+* field: indexed field
+* value: value to match
 * options
-* callback -- `function (err, models, pagination) { }`
+* callback -- `function (err, models, pagination)`
 
-`models` in callback is an array of model instances unless returnStream is true in options.
+Callback Arguments:
+
+1. __err__: Set only if there was an error.
+2. __models__: An array of model instances unless the [returnStream option](#op-returnStream) is true, at which point it is an [object stream](http://nodejs.org/api/stream.html#stream_object_mode) of resulting model instances.
+3. __pagination__: An object containing specified [limit](#op-limit), [offset](#op-offset), an actual `count` and potential `total` if no offset/limit had been assigned.
 
 Options:
 
-* db: levelup instance
-* bucket: bucket name
-* depth: integer depth to recursively resolve foreign objects (default 5)
-* offset: integer to offset results by (pagination)
-* limit: integer limit of results (pagination)
-* returnStream: boolean (default false) returns stream of objects rather than using callback (callback is also called with stream instead of array)
+* [db](#op-db)
+* [bucket](#op-bucket)
+* [offset](#op-offset)
+* [limit](#op-limit)
+* [reverse](#op-reverse)
+* [filter](#op-filter)
+* [depth](#op-depth)
+* [returnStream](#op-returnStream)
 
-This ends up calling [all](#all) with some index options, so you get the same pagination features.
+
+:information\_source: This ends up calling [all](#all) with some index options, so you get the same pagination features.
+
+```javascript
+Person.getByIndex('lastName', 'Fritz', function (err, persons) {
+    console.log("All of the Fritzes.");
+    persons.forEach(function (person) {
+        console.log(person.key, person.fullName);
+    });
+});
+```
 
 -----
 
@@ -809,31 +851,31 @@ Just like [getByIndex](#getByIndex), except only return one value, rather than a
 
 Arguments:
 
-* field -- indexed field
-* value -- value to match
+* field: indexed field
+* value: value to match
 * options
-* callback -- `function (err, models, pagination) { }`
+* callback -- `function (err, model)`
 
-`models` in callback is an array of model instances unless returnStream is true in options.
+Callback Arguments:
+
+1. __err__: Set only if there was an error.
+2. __model__: Model instance if an index of the specified value was found. Otherwise `undefined`.
 
 Options:
 
-* db: levelup instance
-* bucket: bucket name
-* depth: integer depth to recursively resolve foreign objects (default 5)
-------
+* [db](#op-db)
+* [bucket](#op-bucket)
+* [depth](#op-depth)
 
-<a name="bucket"></a>
-__bucket(name)__
-
-Returns a new Factory, set up for the bucket named.
-Factory.options.dbdir must be set.
-
-Arguments:
-
-* name -- bucket name
-
-----
+```javascript
+Person.findByIndex('phoneNumber', '509-555-5555', function (err, person) {
+    if (!err && person) {
+        console.log("Found person", person.toJSON(), '@ key', person.key);
+    } else {
+        console.log("Unable to find person with that phone number.");
+    }
+});
+```
 
 ## Model Instance Methods
 

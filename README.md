@@ -4,15 +4,20 @@ VeryModel-Level is an ORM for an embedded keystore in your Node.js app.
 
 Features Include:
 
+* Models
 * Ordered Objects
 * Lookup by Index
 * Retrieving Models sorted by Index
+* Retrieve index ranges
+* Retrieve with filters
 * Foreign Keys and Foreign Collections
 * Children
 * Pagination
 * Counts
 * Buckets
 * onSave & onDelete Model Events
+* derived fields
+* field types and validation
 
 The models in this ORM use  [VeryModel](https://github.com/fritzy/verymodel) so Verymodel-level extends the definitions and methods.
 
@@ -80,9 +85,12 @@ Most field definition properties that can be functions are called with the model
 * [derive](#def-derive)
 * [foreignKey](#def-foreignKey)
 * [foreignCollection](#def-foreignCollection)
+* [required](#def-required)
+* [default](#def-default)
+* [save](#def-save)
+* [private](#def-private)
 
-
-<a name='def_type'></a>
+<a name='def-type'></a>
 __type__
 
 A string which references a built in type.
@@ -101,7 +109,7 @@ Example:
 
 ----
 
-<a name='def_validate'></a>
+<a name='def-validate'></a>
 __validate__
 
 The `validate` field takes a value and should determine whether that value is acceptable or not. It's ran during `doValidate()` or during `save` if you set the option `validateOnSave: true`.
@@ -120,7 +128,7 @@ new VeryModelLevel({field: {
 
 ----
 
-<a name='def_processIn'></a>
+<a name='def-processIn'></a>
 __processIn__
 
 `processIn` is a function that is passed a value on loading from the database, `create`, or `loadData`. It should return a value.
@@ -141,7 +149,7 @@ new VeryLevelModel({someDateField: {
 
 ----
 
-<a name='def_processOut'></a>
+<a name='def-processOut'></a>
 __processOut__
 
 `processOut` is a function that takes a value and returns a value, just like `processIn`, but is typically used to serialize the value for storage. It runs on `save()` and `toJSON()`.
@@ -158,7 +166,7 @@ new VeryLevelModel({someDateField: {
 
 ----
 
-<a name='def_onSet'></a>
+<a name='def-onSet'></a>
 __onSet__
 
 `onSet` is just like `processIn`, except that it only runs on direct assignment. It's a function that takes a value and returns a value.
@@ -185,7 +193,7 @@ new VeryLevelModel({someDateField: {
 
 ----
 
-<a name='def_derive'></a>
+<a name='def-derive'></a>
 __derive__
 
 `derive` is a function that returns a value whenever the field is accessed (which can be quite frequent. The `this` context, is the current model instance, so you can access other fields.
@@ -207,7 +215,7 @@ new VeryLevelModel({
 
 ----
 
-<a name='def_foreignKey'></a>
+<a name='def-foreignKey'></a>
 __foreignKey__
 
 `foreignKey` should be a Model Factory or a string of the factory name.
@@ -227,7 +235,7 @@ new VeryLevelModel({
 
 ----
 
-<a name='def_foreignCollection'></a>
+<a name='def-foreignCollection'></a>
 __foreignCollection__
 
 `foreignCollection`'s are like `foreignKey`'s except they are of an array type.
@@ -247,7 +255,7 @@ new VeryLevelModel({
 
 ----
 
-<a name='def_required'></a>
+<a name='def-required'></a>
 __required__
 
 `required` is a boolean, false by default.
@@ -268,7 +276,7 @@ new VeryLevelModel({
 
 ----
 
-<a name='def_default'></a>
+<a name='def-default'></a>
 __default__
 
 `default` may be a value or a function. Default is only brought into play when a field is `required` but not assigned.
@@ -287,42 +295,174 @@ new VeryLevelModel({
 });
 ```
 
+----
+
+<a name='def-save'></a>
+__save__
+
+`save` is a boolean, true by default which determines whether a field should be omitted during save or not.
+
+It can be handy to not save derived fields.
+
+Example:
+
+```js
+new VeryLevelModel({
+    firstName: {type: 'string'},
+    lastName: {type: 'string'},
+    fullName: {
+        type: 'string',
+        derive: function () {
+            return [this.firstName, this.lastName].join(" ");
+        },
+        save: false,
+    }
+});
+```
+
+---
+
+<a name='def-private'></a>
+__private__
+
+`private` is a boolean, false by default, which determines whether a field is saved into the object upon [save](#save) and included in the object resulting from [toJSON()](#toJSON).
+
+You can force private methods to be included in saved objects with the model option [savePrivate](#mo-savePrivate), while preserving [toJSON](#toJSON) omittion.
 
 ### Model Options
 
-* name: String name of model
-* db: levelup or levelup compatible instance database
-* dbdir: automatically create leveldb files in this directory
-* bucket: name of bucket
-* onSave: -- function
-* onDelete --
+Model options are the second argument of the `VeryLevelModel` constructor.
 
 Requirements:
 
 * Models must have a name option.
-* Models may have a db or a dbdir.
+* Models must have a db or a dbdir.
 * Models may have a bucket. You may also define buckets elsewhere if dynamic.
 
-Note: Multiple models and can should use the same bucket.
-Multile models SHOULD NOT use the same name.
-
-Examples:
-
-```js
-{
-    name: 'person',
-    db: levelup(__dirname + '/thisapp.db'),
-}
-```
-```js
-{
-    name: 'person',
-    dbdir: __dirname + '/database/',
-    bucket: 'hampeople',
-}
-```
+__Note__: Multiple models and can should use the same bucket.
+Multiple models SHOULD NOT use the same name.
 
 Buckets are useful for seperating groups of data by access groups or other things.
+
+
+Index:
+
+* [name](#mo-name)
+* [db](#mo-db)
+* [dbdir](#mo-dbdir)
+* [bucket](#mo-bucket)
+* [onSave](#mo-onSave)
+* [onDelete](#mo-onDelete)
+* [savePrivate](#mo-savePrivate)
+* [saveKey](#mo-saveKey)
+
+Example:
+
+```js
+new VeryLevelModel({
+        someField: {},
+        someOtherField: {},
+    },
+    {
+        name: 'person',
+        db: levelup(__dirname + '/thisapp.db'),
+    }
+);
+
+```
+<a name='mo-name'></a>
+__name__
+
+The name is required should be a short (one or two word) alphanumeric string with no spaces.
+This name is used as a prefix within the key store, as well as a string reference to the Model Factory itself to prevent circular requirements.
+
+----
+
+<a name='mo-db'></a>
+__db__
+
+The db field should refer to a [LevelUp](https://github.com/rvagg/node-levelup) or compatible library connection.
+
+This field or [dbdir](#mo-dbdir) is required.
+
+---
+
+<a name='mo-dbdir'></a>
+__dbdir__
+
+This field should be a full directory path in which to store the databases if you're using buckets.
+
+---
+
+<a name='mo-bucket'></a>
+__bucket__
+
+This is the default bucket name for the model. Each method that interactions with the underlying database may override the bucket.
+
+---
+
+<a name='mo-onSave'></a>
+__onSave__
+
+`{onSave: function (err, details, done) { } }`
+
+The details object contains: 
+
+    {
+        model: model-instance,
+        changes: changes,
+        ctx: ctx
+    }
+
+
+The changes is an object of fields with 'then', 'now', and 'changed', values.
+
+    {
+        field1: {then: 'cheese', now: 'ham', changed: true},
+        field2: {then: 'who', now: 'whom', changed: true}
+    }
+
+
+The `ctx` argument is whatever you passed with the [ctx option](#op-ctx) to the [save method](#save).
+
+If you require a full model instance of what used to be, do this:
+
+    var oldmodel = details.model.getOldModel();
+
+You must execute the done callback when done.
+
+---
+
+<a name='mo-onDelete'></a>
+__onDelete__
+
+`{onSave: function (err, details, donecb) { } }`
+
+The details object contains:
+
+    {
+        ctx: ctx
+    }
+
+The `ctx` argument is whatever you passed to with [ctx option](#op-ctx) to the [delete method](#delete).
+
+You must execute the done callback.
+
+---
+
+<a name='mo-savePrivate'></a>
+__savePrivate__
+
+A boolean, false by default, to enable saving of [private](#def-private) fields.
+
+---
+
+<a name='mo-saveKey'></a>
+__saveKey__
+
+A boolean, false by default, to enabling saving the key field within the object.
+
+---
 
 ## Options and Callbacks
 
@@ -334,6 +474,123 @@ Some methods will take pagination methods: `offset` and `limit`.
 `save`, `update`, and `delete` methods can take a `ctx` object in options to pass on to the `factory.options.onSave` and `factory.options.onDelete` callbacks.
 
 Callbacks are always required on functions that include them, and lead with an error-first approach.
+
+### Common Options
+
+* [db](#op-db)
+* [bucket](#op-bucket)
+* [offset](#op-offset)
+* [limit](#op-limit)
+* [sortBy](#op-sortBy)
+* [indexValue](#op-indexValue)
+* [indexRange](#op-indexRange)
+* [reverse](#op-reverse)
+* [filter](#op-filter)
+* [depth](#op-depth)
+* [ctx](#op-ctx)
+* [returnStream](#op-returnStream)
+
+<a name='op-db'></a>
+__db__
+
+This option overrides the current database defined with mf.options.db or mf.options.dbdir + mf.options.bucket for the current call.
+
+----
+
+<a name='op-bucket'></a>
+__bucket__
+
+This overrides the current database defined with mf.options.dbdir + mfoptions.bucket.
+
+----
+
+<a name='op-offset'></a>
+__offset__
+
+This skips `offset` number of entries in a read call.
+
+----
+
+<a name='op-limit'></a>
+__limit__
+
+This limits the number of results in a read call.
+
+----
+
+<a name='op-sortBy'></a>
+__sortBy__
+
+`sortBy` must be an indexed field. The results of a read call are sorted by the value of this field.
+
+----
+
+<a name='op-indexValue'></a>
+__indexValue__
+
+Only get results from this indexed field with a specific value.
+
+----
+
+<a name='op-indexRange'></a>
+__indexRange__
+
+Only get the results from this indexed field within a specific range (in order).
+
+    {indexRange: {start: 'start value', end: 'end value'}}
+
+----
+
+<a name='op-reverse'></a>
+__reverse__
+
+Boolean, when true, reverses the result order from a read call.
+
+----
+
+<a name='op-filter'></a>
+__filter__
+
+`filter` is a function that is given a model instance, and returns false to filter out the result, or true to keep the result. Model instances have expanded their foreign values yet.
+
+Example:
+
+```js
+{filter: function (inst) {
+        if (inst.lastName !== 'Fritz') {
+            return false;
+        }
+        return true;
+    }
+}
+```
+
+----
+
+<a name='op-depth'></a>
+__depth__
+
+`depth` is an integer, 5 by default, that determines how many recursive layers to expand [foreignKey](#def-foreignKey) and [foreignCollection](#def-foreignCollection) fields.
+
+0 means means that it will not expand any keys.
+
+----
+
+<a name='op-ctx'></a>
+__ctx__
+
+Whater you assign to `ctx` will be passed to the resulting [onSave](#mo-onSave) or [onDelete](#onDelete) callbacks.
+
+Useful for passing the user and other context from an HTTP API call to the model callbacks, and many other similar use cases.
+
+----
+
+<a name='op-returnStream'></a>
+__returnStream__
+
+A boolean, when true, causes a read function to return an object stream, and call the callback with the stream rather than the concatenated array of models.
+
+----
 
 ## Model Factory Methods
 
@@ -391,9 +648,9 @@ Arguments:
 
 Options:
 
-* db: levelup instance
-* bucket: bucket name
-* depth: integer depth to recursively resolve foreign objects (default 5)
+* [db](#op-db)
+* [bucket](#op-bucket)
+* [depth](#op-depth)
 
 Example:
 
@@ -418,17 +675,21 @@ Arguments:
 * options
 * callback -- `function (err, models, pagination) { }`
 
-`models` in callback is an array of model instances unless returnStream is true in options.
+`models` in callback is an array of model instances unless [returnStream](#op-returnStream) is true in options.
 
 Options:
 
-* db: levelup instance
-* bucket: bucket name
-* depth: integer depth to recursively resolve foreign objects (default 5)
-* sortBy: indexed field to results in order of value
-* offset: integer to offset results by (pagination)
-* limit: integer limit of results (pagination)
-* returnStream: boolean (default false) returns stream of objects rather than using callback (callback is also called with stream instead of array)
+* [db](#op-db)
+* [bucket](#op-bucket)
+* [offset](#op-offset)
+* [limit](#op-limit)
+* [sortBy](#op-sortBy)
+* [indexValue](#op-indexValue)
+* [indexRange](#op-indexRange)
+* [reverse](#op-reverse)
+* [filter](#op-filter)
+* [depth](#op-depth)
+* [returnStream](#op-returnStream)
 
 ----
 
@@ -447,9 +708,9 @@ Arguments:
 
 Options:
 
-* db: levelup instance
-* bucket: bucket name
-* ctx: context object to send to `factory.options.onSave` upon success
+* [db](#op-db)
+* [bucket](#op-bucket)
+* [ctx](#op-ctx)
 
 ----
 
@@ -622,46 +883,3 @@ __getOldModel()__
 __loadData()__
 
 ----
-### onSave
-
-    function (err, {model, changes, ctx}, cb) {
-    }
-
-The changes is an object of fields with 'then', 'now', and 'changed', values.
-
-    {
-        field1: {then: 'cheese', now: 'ham', changed: true},
-        field2: {then: 'who', now: 'whom', changed: true}
-    }
-
-
-If you require a full model instance of what used to be, do this:
-
-    var oldmodel = model.getOldModel();
-
-The `ctx` argument is whatever you passed to `save({ctx: 'ctx goes here'}, function ...`
-
-You must execute the callback as is the callback you passed save.
-
-### onDelete
-
-    function (err, {ctx}, cb) {
-    }
-
-The `ctx` argument is whatever you passed to `delete({ctx: 'ctx goes here'}, function ...`
-
-You must execute the callback as is the callback you passed delete.
-
-
-## Field Filtering
-
-By default, fields marked `private: true` will not be saved, but you can override that with `factory.options.savePrivate = true` You can seperately mark fields as not saved in the field definition with `save: false`.
-
-These destinctions are useful for things like password fields that you wouldn't want to be exposed to an API with toJSON, but do want to save.
-
-## Foreign Keys and Collections
-
-You can refer to foreign objects, and have them load automatically with an object by with foreignKey and foreignCollection field defintions. They should point to another VeryLevelModel Factory.
-
-While recursive loading happens automatically, only the keys of the sub-objects are saved on save(). If you've changed fields in the foreign objects, you must save those directly.
-

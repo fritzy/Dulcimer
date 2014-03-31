@@ -624,7 +624,7 @@ Returns a factory instance model.
 
 Create makes a new instance of the model with specific data.
 Any fields in the `value_object` that were not defined get thrown out.
-Validations are not done on creation, but some values may be processed based on the field defintion type and `processIn` functions.
+Validations are not done on creation, but some values may be processed based on the field definition type and `processIn` functions.
 
 Create does not save the value; you'll have to run `.save(function (err) { ... })` on the returned model instance.
 

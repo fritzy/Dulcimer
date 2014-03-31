@@ -646,6 +646,12 @@ Arguments:
 * options
 * callback -- `function (err, model)`
 
+Callback Arguments:
+
+1. __err__: An error indicating failure to get the model instance.
+2. __model__: A model instance of the Model Factory that called get (if there was no err).
+
+
 Options:
 
 * [db](#op-db)
@@ -673,9 +679,12 @@ Results are in order of insertion unless ordered by an indexed field.
 Arguments:
 
 * options
-* callback -- `function (err, models, pagination) { }`
+* callback -- `function (err, models, pagination)`
 
-`models` in callback is an array of model instances unless [returnStream](#op-returnStream) is true in options.
+Callback Arguments:
+
+1. __err__: If err is set, there has been an error getting result.
+2. __models__: An array of model instances unless the [returnStream option](#op-returnStream) is true, at which point it is an [object stream](http://nodejs.org/api/stream.html#stream_object_mode) of resulting model instances.
 
 Options:
 

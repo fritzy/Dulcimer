@@ -476,7 +476,7 @@ Some methods will take pagination methods: `offset` and `limit`.
 Callbacks are always required on functions that include them, and lead with an error-first approach.
 
 
-:point\_up: Remeber, options are always optional, meaning you don't have to the argument at all.
+:point\_up: Remember, options are always optional, meaning you don't have to the argument at all.
 
 ### Common Options
 

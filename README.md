@@ -1043,7 +1043,7 @@ Example:
 ```javascript
 person.getChildren(Comment, function (err, comments, pagination) {
     console.log("All of the comments for", person.fullName);
-    console.log("-===============================-");
+    console.log("-===============================-", pagination.total);
     comments.forEach(function (err, comment) {
         console.log(comment.body);
         console.log("-", comment.author.fullName);
@@ -1054,40 +1054,180 @@ person.getChildren(Comment, function (err, comments, pagination) {
 ----
 
 <a name="getChildrenByIndex"></a>
-__getChildrenByIndex(otherModelFactory, field, value, options, callback)__
+__getChildrenByIndex(ModelFactory, field, value, options, callback)__
+
+Retrieves the children of a specific instance, of a specific model, with a specific indexed field value.
+
+Arguments:
+
+* ModelFactory: This can be any VeryLevelModel factory, including the same one as the parent.
+* field: index field
+* value: field value to match
+* options
+* callback `function (err, models, callback)`
+
+Callback Arguments:
+
+1. __err__: If err is set, there has been an error getting result.
+2. __models__: An array of model instances unless the [returnStream option](#op-returnStream) is true, at which point it is an [object stream](http://nodejs.org/api/stream.html#stream_object_mode) of resulting model instances.
+3. __pagination__: An object containing specified [limit](#op-limit), [offset](#op-offset), an actual `count` and potential `total` if no offset/limit had been assigned.
+
+Options:
+
+* [db](#op-db)
+* [bucket](#op-bucket)
+* [offset](#op-offset)
+* [limit](#op-limit)
+* [reverse](#op-reverse)
+* [filter](#op-filter)
+* [depth](#op-depth)
+* [returnStream](#op-returnStream)
+
+Example:
+
+```javascript
+person.getChildrenByIndex(Comment, 'date', '2014-02-10', function (err, comments, pagination) {
+    console.log("All of the comments for", person.fullName, "today.");
+    console.log("-===============================-", pagination.total);
+    comments.forEach(function (err, comment) {
+        console.log(comment.body);
+        console.log("-", comment.author.fullName);
+    });
+});
+```
 
 ----
 
 <a name="findChildByIndex"></a>
-__findChildByIndex(otherModelFactory, field, value, options, callback)__
+
+Similar to [getChildrenByIndex](#getChildrenByIndex) except that it only returns one result.
+
+Arguments:
+
+* ModelFactory: This can be any VeryLevelModel factory, including the same one as the parent.
+* field: index field
+* value: field value to match
+* options
+* callback `function (err, model, callback)`
+
+Callback Arguments:
+
+1. __err__: If err is set, there has been an error getting result.
+2. __model__: A model instance.
+
+Options:
+
+* [db](#op-db)
+* [bucket](#op-bucket)
+
+Example:
+
+```javascript
+person.findChildByIndex(Version, 'created', person.created, function (err, version) {
+    console.log("The version log entry for the initial creation of", person.fullName);
+    console.log(version.toJSON());
+    //ok, this one is a bit contrived
+});
+```
 
 ----
 
 <a name="toJSON"></a>
-__toJSON()__
+__toJSON(flags)__
+
+Outputs a JSON style object from the model.
+
+Boolean Flags:
+
+* noDepth: false by default. If true, does not recursively toJSON objects like [foreignKey](#def-foreignKey)s and [foreignCollection](#def-foreignCollection)s.
+* withPrivate: false by default. If true, includes fields with [private](#def-private) set to true.
+
+Example:
+
+You want an example? Look at all of the other examples... most of them use [toJSON](#toJSON).
+
+
+:point\_up: [toJSON](#toJSON) does not produce a string, but an object. See: [toString](#toString).
 
 ----
 
 <a name="toString"></a>
 __toString()__
 
+Just like [toJSON](#toJSON), but produces a JSON string rather than an object.
+
 ----
 
 <a name="diff"></a>
-__diff()__
+__diff(other)__
+
+Arguments:
+
+* other: model instance to compare this one to.
+
+Result: object of each field with left, and right values.
+
+```js
+{
+    firstName: {left: 'Nathan', right: 'Sam'},
+    lastName: {left: 'Fritz', right: 'Fritz'},
+}
+```
+
 
 ----
 
 <a name="getChanges"></a>
 __getChanges()__
 
+Get the changes since [get](#get) or [create](#create).
+
+Result: object of each field with then, now, and changed boolean.
+
+```js
+{
+    body: {then: "I dont liek cheese.", now: "I don't like cheese.", changed: true},
+    updated: {then: '2014-02-10 11:11:11', now: '2014-02-10 12:12:12', changed: true},
+    created: {then: '2014-02-10 11:11:11', now: '2014-02-10 11:11:11', changed: false},
+}
+```
+
 ----
 
 <a name="getOldModel"></a>
 __getOldModel()__
 
+Get a new model instance of this instance with all of the changes since [get](#get) or [create](#create) reversed.
+
+Result: Model instance.
+
 ----
 
 <a name="loadData"></a>
 __loadData()__
+
+Loads data just like when a model instance is retrieved or [create](#create)d.
+
+[processIn](#def-processIn) is called on any fields specified, but [onSet](#def-onSet) is not.
+
+Essentially the same things happen as when running [create](#create) but can be done after the model instance is initialized.
+
+Example:
+
+```javascript
+var person = Person.create({
+    firstName: 'Nathan',
+    lastName: 'Fritz',
+});
+
+person.favoriteColor = 'blue';
+
+person.loadData({
+    favoriteColor: 'green',
+    favoriteFood: 'burrito',
+});
+
+console.log(person.toJSON());
+// {firstName: 'Nathan', lastName: 'Fritz', favoriteFood: 'burrito', favoriteColor: 'green'}
+```
 

@@ -71,7 +71,7 @@ Every root property of a model definition is a field name with an object value d
 
 #### Field Definition Properties
 
-When making a model, you must defined the fields in the model.
+When making a model, you must define the fields in the model.
 A field definition may be a simple empty `{}` if anything goes.
 
 Most field definition properties that can be functions are called with the model instance as the `this` context.
@@ -112,7 +112,7 @@ Example:
 <a name='def-validate'></a>
 __validate__
 
-The `validate` field takes a value and should determine whether that value is acceptable or not. It's ran during `doValidate()` or during `save` if you set the option `validateOnSave: true`.
+The `validate` field takes a value and should determine whether that value is acceptable or not. It's run during `doValidate()` or during `save` if you set the option `validateOnSave: true`.
 The function should return a boolean, an array of errors, an empty array, or an error string.
 
 Example:
@@ -196,7 +196,7 @@ new VeryLevelModel({someDateField: {
 <a name='def-derive'></a>
 __derive__
 
-`derive` is a function that returns a value whenever the field is accessed (which can be quite frequent. The `this` context, is the current model instance, so you can access other fields.
+`derive` is a function that returns a value whenever the field is accessed (which can be quite frequent). The `this` context, is the current model instance, so you can access other fields.
 
 Example:
 
@@ -339,7 +339,7 @@ Requirements:
 * Models must have a db or a dbdir.
 * Models may have a bucket. You may also define buckets elsewhere if dynamic.
 
-__Note__: Multiple models and can should use the same bucket.
+__Note__: Multiple models can and should use the same bucket.
 Multiple models SHOULD NOT use the same name.
 
 Buckets are useful for seperating groups of data by access groups or other things.
@@ -397,7 +397,7 @@ This field should be a full directory path in which to store the databases if yo
 <a name='mo-bucket'></a>
 __bucket__
 
-This is the default bucket name for the model. Each method that interactions with the underlying database may override the bucket.
+This is the default bucket name for the model. Each method that interacts with the underlying database may override the bucket.
 
 ---
 
@@ -415,7 +415,7 @@ The details object contains:
     }
 
 
-The changes is an object of fields with 'then', 'now', and 'changed', values.
+The `changes` property is an object of fields with 'then', 'now', and 'changed', values.
 
     {
         field1: {then: 'cheese', now: 'ham', changed: true},
@@ -423,7 +423,7 @@ The changes is an object of fields with 'then', 'now', and 'changed', values.
     }
 
 
-The `ctx` argument is whatever you passed with the [ctx option](#op-ctx) to the [save method](#save).
+The `ctx` property is whatever you passed with the [ctx option](#op-ctx) to the [save method](#save).
 
 If you require a full model instance of what used to be, do this:
 
@@ -444,7 +444,7 @@ The details object contains:
         ctx: ctx
     }
 
-The `ctx` argument is whatever you passed to with [ctx option](#op-ctx) to the [delete method](#delete).
+The `ctx` property is whatever you passed to with [ctx option](#op-ctx) to the [delete method](#delete).
 
 You must execute the done callback.
 
@@ -623,8 +623,8 @@ __create(value_object)__
 Returns a factory instance model.
 
 Create makes a new instance of the model with specific data.
-Any fields in the value\_object that were not defined get thrown out.
-Validations are not done on creation, but some values may be processed based on the field defintion type and processIn functions.
+Any fields in the `value_object` that were not defined get thrown out.
+Validations are not done on creation, but some values may be processed based on the field defintion type and `processIn` functions.
 
 Create does not save the value; you'll have to run `.save(function (err) { ... })` on the returned model instance.
 

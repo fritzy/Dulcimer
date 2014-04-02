@@ -54,6 +54,9 @@ function makeModelLevely(mf) {
         keyname: {
             private: !mf.options.includeKey,
         },
+        vclock: {
+            private: true,
+        },
     });
 
     mf.handleOpts = function (name, opts, callback) {

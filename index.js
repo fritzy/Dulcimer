@@ -65,10 +65,16 @@ function makeModelLevely(mf) {
         } else {
             opts.cb = callback;
         }
-        if (opts.bucket) {
+        if (opts.bucket && mf.options.dbdir) {
             opts.db = mf.getBucketDB(opts.bucket);
         } else if (!opts.db) {
             opts.db = mf.options.db;
+        }
+        if (opts.db.isRiak && !opts.bucket) {
+            opts.bucket = mf.options.bucket;
+        }
+        if (!mf.options.bucket) {
+            opts.bucket = 'default';
         }
         if (typeof opts.cb !== 'function') {
             throw Error('The last argument in ' + name + 'must be a function');
@@ -76,7 +82,7 @@ function makeModelLevely(mf) {
         if (!opts.db) {
             throw new Error("Model factories must include a db option of a levelup instance with valueEncoding of json.");
         }
-        if (opts.db.isClosed()) {
+        if (opts.db.isClosed() && !opts.bucket.isRiak) {
             mf.options.db = opts.db = mf.getBucketDB(mf.options.bucket || 'defaultbucket');
         }
         if (typeof opts.depth === 'undefined') {

@@ -26,7 +26,8 @@
     "precommit-hook": "0.3.5"
   },
   "scripts": {
-    "test": "rm -rf tests/*.db && node_modules/nodeunit/bin/nodeunit tests/tests.js && rm -rf tests/*.db"
+    "test": "rm -rf tests/*.db && node_modules/nodeunit/bin/nodeunit tests/tests.js && rm -rf tests/*.db",
+    "testriak": "node_modules/nodeunit/bin/nodeunit tests/riak.js"
   },
   "main": "index.js"
 }

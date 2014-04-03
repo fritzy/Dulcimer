@@ -384,7 +384,7 @@ module.exports = {
                 testfield: {}
             },
             {
-                dbdir: __dirname,
+                db: db,
                 prefix: 'thing'
             });
         var BucketThing = Thing.bucket('ham');

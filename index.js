@@ -71,10 +71,7 @@ function makeModelLevely(mf) {
             opts.db = mf.options.db;
         }
         if (opts.db.isRiak && !opts.bucket) {
-            opts.bucket = mf.options.bucket;
-        }
-        if (!mf.options.bucket) {
-            opts.bucket = 'default';
+            opts.bucket = mf.options.bucket || 'default';
         }
         if (typeof opts.cb !== 'function') {
             throw Error('The last argument in ' + name + 'must be a function');

@@ -533,7 +533,7 @@ module.exports = {
         });
     },
     "Delete All": function (test) {
-        dbstreams.deleteKeysWithPrefix({db: db, prefix: ""}, function (err) {
+        dbstreams.deleteKeysWithPrefix({db: db, prefix: "", bucket: 'default'}, function (err) {
             test.done();
             db.close();
         });

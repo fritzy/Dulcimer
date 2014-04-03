@@ -83,6 +83,7 @@ Most field definition properties that can be functions are called with the model
 * [processOut](#def-processOut)
 * [onSet](#def-onSet)
 * [derive](#def-derive)
+* [index](#def-index)
 * [foreignKey](#def-foreignKey)
 * [foreignCollection](#def-foreignCollection)
 * [required](#def-required)
@@ -190,6 +191,15 @@ new VeryLevelModel({someDateField: {
     },
 })
 ```
+
+----
+<a name='def-index'></a>
+__index__
+
+When set to true, this field is indexed with every save.
+This allows you to [getByIndex](#getByIndex), [findByIndex](#findByIndex) and the ability to use [sortBy](#op-sortBy) in various calls.
+
+An indexed field of [type](#def-type) `'integer'` is indexed differently. Please make sure indexed numbers are of that type.
 
 ----
 

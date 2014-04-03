@@ -80,11 +80,11 @@ module.exports = {
     'Delete key': function (test) {
         var TM = new VeryLevelModel({idx: {}}, {db: db, prefix: 'TM'});
         var tm = TM.create({idx: 'crap', keyname: 'custom', index: true});
-        test.equal(tm.key, 'TM!custom');
+        test.equal(tm.key, 'TM!custom', "key isn't custom");
         tm.save(function (err) {
-            test.ifError(err);
+            test.ifError(err, "got an error on save");
             TM.delete('TM!custom', function (err) {
-                test.ifError(err);
+                test.ifError(err, "got an error on delete");
                 test.done();
             });
         });

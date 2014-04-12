@@ -21,6 +21,8 @@ Features Include:
 
 The models in this ORM use [VeryModel](https://github.com/fritzy/verymodel). Dulcimer modeels extend the definitions and methods.
 
+:point\_up: Currently Dulcimer supports LevelUp based backends. Work for Riak support is nearly finished using [levelup-riak](https://github.com/fritzy/levelup-riak) with more to come.
+
 ## A Quick Example
 
 ```js

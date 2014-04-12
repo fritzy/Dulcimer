@@ -1,12 +1,12 @@
 {
-  "name": "verymodel-level",
-  "version": "1.10.1",
-  "homepage": "https://github.com/fritzy/VeryModel",
+  "name": "dulcimer",
+  "version": "1.0.0",
+  "homepage": "https://github.com/fritzy/Dulcimer",
   "repository": {
     "type": "git",
-    "url": "git@github.com:fritzy/verymodel-level.git"
+    "url": "git@github.com:fritzy/Dulcimer.git"
   },
-  "description": "Leveldb extensions for verymodel",
+  "description": "An ORM for keystores",
   "dependencies": {
     "validator": "~2.1.0",
     "underscore": "^1.6.0",

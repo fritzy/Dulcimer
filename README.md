@@ -1,6 +1,6 @@
-#VeryModel-Level
+#Dulcimer
 
-VeryModel-Level is an ORM for an embedded keystore in your Node.js app.
+Dulcimer is an ORM for an embedded keystore in your Node.js app.
 
 Features Include:
 
@@ -19,16 +19,16 @@ Features Include:
 * derived fields
 * field types and validation
 
-The models in this ORM use  [VeryModel](https://github.com/fritzy/verymodel) so Verymodel-level extends the definitions and methods.
+The models in this ORM use [VeryModel](https://github.com/fritzy/verymodel). Dulcimer modeels extend the definitions and methods.
 
 ## A Quick Example
 
 ```js
-var VeryLevelModel = require('verymodel-level');
+var dulcimer = require('dulcimer');
 var levelup = require('levelup');
 var db = levelup('./test.db');
 
-var PersonFactory = new VeryLevelModel({
+var PersonFactory = new dulcimer.Model({
     firstName: {},
     lastName: {},
     fullName: {derive: function () {
@@ -113,7 +113,7 @@ nathan.save(function (err) {
     * [loadData](#loadData)
 
 ## Installing
-`npm install verymodel-level`
+`npm install dulcimer`
 
 ## Defining a Model Factory
 Model Factories define the platonic model, and can create model instances.
@@ -174,7 +174,7 @@ The function should return a boolean, an array of errors, an empty array, or an 
 Example:
 
 ```js
-new VeryModelLevel({field: {
+new dulcimer.Model({field: {
     validate: function (value) {
         //validate on even
         return (value % 2 === 0);
@@ -196,7 +196,7 @@ This function is often paired with `processOut` in order to make an interactive 
 Example:
 
 ```javascript
-new VeryLevelModel({someDateField: {
+new dulcimer.Model({someDateField: {
     processIn: function (value) {
         return moment(value);
     },
@@ -213,7 +213,7 @@ __processOut__
 Example:
 
 ```javascript
-new VeryLevelModel({someDateField: {
+new dulcimer.Model({someDateField: {
     processIn: function (value) {
         return moment(value);
     },
@@ -230,7 +230,7 @@ __onSet__
 Example:
 
 ```javascript
-new VeryLevelModel({someDateField: {
+new dulcimer.Model({someDateField: {
     processIn: function (value) {
         return moment(value);
     },
@@ -266,7 +266,7 @@ __derive__
 Example:
 
 ```js
-new VeryLevelModel({
+new dulcimer.Model({
     firstName: {type: 'string'},
     lastName: {type: 'string'},
     fullName: {
@@ -292,7 +292,7 @@ When assigning values to this field, you can either assign a model instance or a
 Example: 
 
 ```js
-new VeryLevelModel({
+new dulcimer.Model({
     comment: {'string'},
     author: {foreignKey: 'user'},
 });
@@ -311,7 +311,7 @@ When assigning values to these fields, you may either assign an array of model i
 Example: 
 
 ```js
-new VeryLevelModel({
+new dulcimer.Model({
     comment: {'string'},
     author: {foreignKey: 'user'},
     starredBy: {foreignCollection: 'user'}
@@ -329,7 +329,7 @@ A required field will attempt to bring in the `default` value if a value is not 
 Example:
 
 ```js
-new VeryLevelModel({
+new dulcimer.Model({
     comment: {'string',
         required: true,
         default: "User has nothing to say."
@@ -348,7 +348,7 @@ __default__
 In function form, `default` behaves similiarly to `derive`, except that it only executes once.
 
 ```js
-new VeryLevelModel({
+new dulcimer.Model({
     comment: {'string',
         required: true,
         default: function () {
@@ -372,7 +372,7 @@ It can be handy to not save derived fields.
 Example:
 
 ```js
-new VeryLevelModel({
+new dulcimer.Model({
     firstName: {type: 'string'},
     lastName: {type: 'string'},
     fullName: {
@@ -425,7 +425,7 @@ Index:
 Example:
 
 ```js
-new VeryLevelModel({
+new dulcimer.Model({
         someField: {},
         someOtherField: {},
     },
@@ -1046,7 +1046,7 @@ __createChild(ModelFactory, value)__
 Children are model instances that you can attach to a model instance.
 They're great for revision logs, comments, etc.
 
-* ModelFactory: This can be any VeryLevelModel factory, including the same one as the parent.
+* ModelFactory: This can be any Dulcimer Model factory, including the same one as the parent.
 * value: initial value, used just like [create](#create)
 
 Example:
@@ -1076,7 +1076,7 @@ Get the children of this model instance of a specific model factory.
 
 Arguments:
 
-* ModelFactory: This can be any VeryLevelModel factory, including the same one as the parent.
+* ModelFactory: This can be any Dulcimer Model factory, including the same one as the parent.
 * options
 * callback `function (err, models, callback)`
 
@@ -1126,7 +1126,7 @@ Retrieves the children of a specific instance, of a specific model, with a speci
 
 Arguments:
 
-* ModelFactory: This can be any VeryLevelModel factory, including the same one as the parent.
+* ModelFactory: This can be any Dulcimer.Model factory, including the same one as the parent.
 * field: index field
 * value: field value to match
 * options
@@ -1170,7 +1170,7 @@ Similar to [getChildrenByIndex](#getChildrenByIndex) except that it only returns
 
 Arguments:
 
-* ModelFactory: This can be any VeryLevelModel factory, including the same one as the parent.
+* ModelFactory: This can be any Dulcimer Model factory, including the same one as the parent.
 * field: index field
 * value: field value to match
 * options

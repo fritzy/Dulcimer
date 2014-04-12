@@ -111,4 +111,6 @@ function VeryLevelModel() {
 
 VeryLevelModel.prototype = Object.create(verymodel.VeryModel.prototype);
 
-module.exports = VeryLevelModel;
+module.exports = {
+    Model: VeryLevelModel,
+};

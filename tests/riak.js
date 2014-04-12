@@ -1,4 +1,4 @@
-var VeryLevelModel = require('../index.js');
+var dulcimer = require('../index.js');
 var level = require('levelup-riak');
 var db = level({host: '127.0.0.1', port: 8087}, {valueEncoding: 'json', errorIfExists: true});
 var async = require('async');
@@ -13,8 +13,8 @@ process.on('uncaughtException', function (err) {
 
 module.exports = {
     'Create multiple children': function (test) {
-        var TM = new VeryLevelModel({idx: {}}, {db: db, prefix: 'TM'});
-        var TMC = new VeryLevelModel({cidx: {}}, {db: db, prefix: 'RC'});
+        var TM = new dulcimer.Model({idx: {}}, {db: db, prefix: 'TM'});
+        var TMC = new dulcimer.Model({cidx: {}}, {db: db, prefix: 'RC'});
         var tm = TM.create({idx: 1});
         tm.save(function (err) {
             var cidx = 0;
@@ -42,20 +42,20 @@ module.exports = {
         });
     },
     'Custom keyname': function (test) {
-        var TM = new VeryLevelModel({idx: {}}, {db: db, prefix: 'TM'});
+        var TM = new dulcimer.Model({idx: {}}, {db: db, prefix: 'TM'});
         var tm = TM.create({idx: 'crap', keyname: 'custom'});
         test.equal(tm.key, 'TM!custom');
         test.done();
 
     },
     'Keyname is not undefined': function (test) {
-        var TM = new VeryLevelModel({idx: {}}, {db: db, prefix: 'TM'});
+        var TM = new dulcimer.Model({idx: {}}, {db: db, prefix: 'TM'});
         var tm = TM.create({idx: 'crap'});
         test.notEqual(tm.key, 'TM!undefined');
         test.done();
     },
     'Delete old index': function (test) {
-        var TM = new VeryLevelModel({idx: {index: true}, name: {}}, {db: db, prefix: 'DOI'});
+        var TM = new dulcimer.Model({idx: {index: true}, name: {}}, {db: db, prefix: 'DOI'});
         var tm = TM.create({'idx':  'ham', 'name': 'swiss'});
         tm.save(function (err) {
             test.ifError(err);
@@ -78,7 +78,7 @@ module.exports = {
         });
     },
     'Delete key': function (test) {
-        var TM = new VeryLevelModel({idx: {}}, {db: db, prefix: 'TM'});
+        var TM = new dulcimer.Model({idx: {}}, {db: db, prefix: 'TM'});
         var tm = TM.create({idx: 'crap', keyname: 'custom', index: true});
         test.equal(tm.key, 'TM!custom', "key isn't custom");
         tm.save(function (err) {
@@ -90,13 +90,13 @@ module.exports = {
         });
     },
     "Don't default with value": function (test) {
-        var TM = new VeryLevelModel({idx: {default: 'crap'}, required: true}, {db: db, prefix: 'DDF'});
+        var TM = new dulcimer.Model({idx: {default: 'crap'}, required: true}, {db: db, prefix: 'DDF'});
         var tm = TM.create({idx: 'news'});
         test.equals(tm.idx, 'news');
         test.done();
     },
     "Don't default function with value": function (test) {
-        var TM = new VeryLevelModel({idx: {default: function () { return 'crap'; }, required: true}}, {db: db, prefix: 'DDF'});
+        var TM = new dulcimer.Model({idx: {default: function () { return 'crap'; }, required: true}}, {db: db, prefix: 'DDF'});
         var tm = TM.create({idx: 'news'});
         test.equals(tm.idx, 'news');
         var tmo = tm.toJSON();
@@ -110,7 +110,7 @@ module.exports = {
 
     },
     "Update shouldn't create a duplicate": function (test) {
-        var TM = new VeryLevelModel({idx: {}}, {db: db, prefix: 'ND'});
+        var TM = new dulcimer.Model({idx: {}}, {db: db, prefix: 'ND'});
         var tm = TM.create({idx: 'hi'});
         tm.save(function (err) {
             TM.update(tm.key, {idx: 'nope'}, function (err, ntm) {
@@ -123,7 +123,7 @@ module.exports = {
         });
     },
     "Update shouldn't create a new if previous isn't found": function (test) {
-        var TM = new VeryLevelModel({idx: {}}, {db: db, prefix: 'ND'});
+        var TM = new dulcimer.Model({idx: {}}, {db: db, prefix: 'ND'});
         TM.update('xxx', {idx: 'hi'}, function (err, tm) {
             test.ok((err !== undefined));
             test.equals(typeof tm, 'undefined');
@@ -131,7 +131,7 @@ module.exports = {
         });
     },
     "Indexes shouldn't get duplicated": function (test) {
-        var TM = new VeryLevelModel({idx: {index: true}, name: {}}, {db: db, prefix: 'HAM'});
+        var TM = new dulcimer.Model({idx: {index: true}, name: {}}, {db: db, prefix: 'HAM'});
         var tm = TM.create({idx: 'nope', name: 'ham'});
         tm.save(function (err) {
             TM.update(tm.key, {name: 'cheese'}, function (err, ntm) {
@@ -145,7 +145,7 @@ module.exports = {
         });
     },
     "Deleting one index shouldn't delete all": function (test) {
-        var TM = new VeryLevelModel({idx: {}, name: {index: true}}, {db: db, prefix: 'ATM'});
+        var TM = new dulcimer.Model({idx: {}, name: {index: true}}, {db: db, prefix: 'ATM'});
         var idx = 0;
         async.whilst(
             function () {
@@ -171,7 +171,7 @@ module.exports = {
         );
     },
     "Test offset and limit": function (test) {
-        var TM = new VeryLevelModel({idx: {}, name: {}}, {db: db, prefix: 'ARP'});
+        var TM = new dulcimer.Model({idx: {}, name: {}}, {db: db, prefix: 'ARP'});
         var idx = 0;
         async.whilst(
             function () {
@@ -194,7 +194,7 @@ module.exports = {
         );
     },
     "onSave": function (test) {
-        var XR = new VeryLevelModel({
+        var XR = new dulcimer.Model({
             idx: {},
             name: {}
         }, {
@@ -214,7 +214,7 @@ module.exports = {
         });
     },
     "onDelete": function (test) {
-        var XR = new VeryLevelModel({
+        var XR = new dulcimer.Model({
             idx: {},
             name: {}
         }, {
@@ -232,8 +232,8 @@ module.exports = {
         });
     },
     "get by child key": function (test) {
-        var TM = new VeryLevelModel({idx: {}}, {db: db, prefix: 'gbckp'});
-        var TMC = new VeryLevelModel({cidx: {}}, {db: db, prefix: 'childgbcp'});
+        var TM = new dulcimer.Model({idx: {}}, {db: db, prefix: 'gbckp'});
+        var TMC = new dulcimer.Model({cidx: {}}, {db: db, prefix: 'childgbcp'});
         var tm = TM.create({idx: 1});
         tm.save(function (err) {
             var tmc = tm.createChild(TMC, {cidx: 2});
@@ -246,7 +246,7 @@ module.exports = {
         });
     },
     "boolean indexes": function (test) {
-        var TM = new VeryLevelModel({idx: {}, thingy: {index: true}}, {db: db, prefix: 'boolidx'});
+        var TM = new dulcimer.Model({idx: {}, thingy: {index: true}}, {db: db, prefix: 'boolidx'});
         var tm1 = TM.create({idx: 1, thingy: false});
         tm1.save(function (err) {
             var tm2 = TM.create({idx: 2, thingy: true});
@@ -264,7 +264,7 @@ module.exports = {
         });
     },
     "integer indexes": function (test) {
-        var TM = new VeryLevelModel({idx: {index_int: true}, thingy: {}}, {db: db, prefix: 'intidx'});
+        var TM = new dulcimer.Model({idx: {index_int: true}, thingy: {}}, {db: db, prefix: 'intidx'});
         var tm = TM.create({idx: 3509835098567, thingy: 'Well hello there!'});
         tm.save(function (err) {
             TM.getByIndex('idx', 3509835098567, function (err, tms) {
@@ -275,7 +275,7 @@ module.exports = {
         });
     },
     "index string ordering": function (test) {
-        var TZ = new VeryLevelModel({idx: {}, name: {index: true}}, {db: db, prefix: 'idxorder'});
+        var TZ = new dulcimer.Model({idx: {}, name: {index: true}}, {db: db, prefix: 'idxorder'});
         var cidx = 0;
         async.eachSeries(['ham', 'cheese', 'zamboni', 'cow', 'nope', 'apple'],
             function (name, acb) {
@@ -300,7 +300,7 @@ module.exports = {
         );
     },
     "index integer ordering": function (test) {
-        var TZ = new VeryLevelModel({idx: {index_int: true}}, {db: db, prefix: 'idxintorder'});
+        var TZ = new dulcimer.Model({idx: {index_int: true}}, {db: db, prefix: 'idxintorder'});
         var cidx = 0;
         async.eachSeries([24, 100, 1, 244, 24, 34563653, 50],
             function (name, acb) {
@@ -333,7 +333,7 @@ module.exports = {
         );
     },
     "Saving Derived Fields": function (test) {
-        var TZ = new VeryLevelModel(
+        var TZ = new dulcimer.Model(
         {
             idx: {index_int: true},
             thing1: {
@@ -368,7 +368,7 @@ module.exports = {
 
     },
     "update doValidate": function (test) {
-        var TZ = new VeryLevelModel({idx: {}, email: {type: new verymodel.VeryType().isEmail()}}, {db: db, prefix: 'updatevalidate'});
+        var TZ = new dulcimer.Model({idx: {}, email: {type: new verymodel.VeryType().isEmail()}}, {db: db, prefix: 'updatevalidate'});
         var tz = TZ.create({idx: 1, email: 'userdoozer.com'});
         tz.save(function (err) {
             TZ.update(tz.key, {email: 'asdfsadham.org'}, {validate: true}, function (err, ntz) {
@@ -380,7 +380,7 @@ module.exports = {
     },
     /*
     "Bucket function": function (test) {
-        var Thing = new VeryLevelModel({
+        var Thing = new dulcimer.Model({
                 testfield: {}
             },
             {
@@ -405,8 +405,8 @@ module.exports = {
     },
     */
     "Submodel test": function (test) {
-        var SM = new VeryLevelModel({name: {}}, {db: db, prefix: 'submodel'});
-        var PM = new VeryLevelModel({name: {}, thing: {foreignKey: SM}}, {db: db, prefix: 'parentmodel'});
+        var SM = new dulcimer.Model({name: {}}, {db: db, prefix: 'submodel'});
+        var PM = new dulcimer.Model({name: {}, thing: {foreignKey: SM}}, {db: db, prefix: 'parentmodel'});
         var sm = SM.create({name: 'derp'});
         sm.save(function (err) {
             var pm = PM.create({name: 'herp', thing: sm});
@@ -420,8 +420,8 @@ module.exports = {
         });
     },
     "Collection Test": function (test) {
-        var SM = new VeryLevelModel({name: {}}, {db: db, prefix: 'submodel'});
-        var PM = new VeryLevelModel({name: {}, stuff: {foreignCollection: SM}}, {db: db, prefix: 'parentmodel'});
+        var SM = new dulcimer.Model({name: {}}, {db: db, prefix: 'submodel'});
+        var PM = new dulcimer.Model({name: {}, stuff: {foreignCollection: SM}}, {db: db, prefix: 'parentmodel'});
         var sm = SM.create({name: 'derp'});
         sm.save(function (err) {
             var  sm2 = SM.create({name: 'lerp'});
@@ -438,8 +438,8 @@ module.exports = {
         });
     },
     "Bad Foreign Key": function (test) {
-        var TMa = new VeryLevelModel({idx: {}}, {db: db, prefix: 'bfka'});
-        var TM = new VeryLevelModel({idx: {}, other_id: {foreignKey: TMa, default: {}}, other_col: {foreignCollection: TMa, default: 'lkjsdf'}}, {db: db, prefix: 'bfkb'});
+        var TMa = new dulcimer.Model({idx: {}}, {db: db, prefix: 'bfka'});
+        var TM = new dulcimer.Model({idx: {}, other_id: {foreignKey: TMa, default: {}}, other_col: {foreignCollection: TMa, default: 'lkjsdf'}}, {db: db, prefix: 'bfkb'});
         var tm = TM.create({idx: 'ham'});
         tm.save(function (err) {
             TM.load(tm.key, function (err, tm2) {
@@ -448,13 +448,13 @@ module.exports = {
         });
     },
     "Bad Load": function (test) {
-        var TM = new VeryLevelModel({idx: {}}, {db: db, prefix: 'BL'});
+        var TM = new dulcimer.Model({idx: {}}, {db: db, prefix: 'BL'});
         TM.load({}, function (err, tm) {
             test.done();
         });
     },
     "onSet": function (test) {
-        var TM = new VeryLevelModel({idx: {}, name: {onSet: function (value) {
+        var TM = new dulcimer.Model({idx: {}, name: {onSet: function (value) {
             return "cheese";
         }}}, {db: db, prefix: 'onset'});
         var tm = TM.create({idx: 1, name: 'ham'});
@@ -464,7 +464,7 @@ module.exports = {
         test.done();
     },
     "Index Range And Filter": function (test) {
-        var TM = new VeryLevelModel({idx: {}, date: {index: true}}, {db: db, prefix: 'index-range'});
+        var TM = new dulcimer.Model({idx: {}, date: {index: true}}, {db: db, prefix: 'index-range'});
         var cidx = 0;
         async.whilst(function () {
             cidx++;
@@ -514,7 +514,7 @@ module.exports = {
         });
     },
     "Wipe test": function (test) {
-        var TM = new VeryLevelModel({idx: {}}, {db: db, prefix: 'wipe'});
+        var TM = new dulcimer.Model({idx: {}}, {db: db, prefix: 'wipe'});
         var cidx = 0;
         async.whilst(function () {
             cidx++;

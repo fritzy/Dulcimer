@@ -1,6 +1,7 @@
 #Dulcimer
 
 Dulcimer is an ORM for an embedded keystore in your Node.js app.
+The aim is to provide a consistent way of working with keystores that enables enjoyable development.
 
 Features Include:
 
@@ -22,6 +23,8 @@ Features Include:
 The models in this ORM use [VeryModel](https://github.com/fritzy/verymodel). Dulcimer models extend the definitions and methods.
 
 :point\_up: Currently Dulcimer supports LevelUp based backends. Work for Riak support is nearly finished using [levelup-riak](https://github.com/fritzy/levelup-riak) with more to come.
+
+:ledger: [Licensed MIT](https://github.com/fritzy/Dulcimer/blob/master/LICENSE)
 
 ## A Quick Example
 

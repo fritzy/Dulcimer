@@ -2,6 +2,8 @@
 
 Dulcimer is an ORM for an embedded keystore in your Node.js app.
 
+Because when all you have is a hammer, everything looks like a dulcimer.
+
 Features Include:
 
 * Models

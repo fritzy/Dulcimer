@@ -3,10 +3,10 @@ var Padlock    = require('padlock').Padlock;
 var keylib     = require('./lib/keys');
 var underscore = require('underscore');
 var getDBPath  = require('./lib/dbpool');
-var indexes = require('./lib/indexes');
-var base = require('./lib/base');
-var children = require('./lib/children');
-var foreign = require('./lib/foreign');
+var indexes    = require('./lib/indexes');
+var base       = require('./lib/base');
+var children   = require('./lib/children');
+var foreign    = require('./lib/foreign');
 
 var model_cache = {};
 
@@ -56,6 +56,11 @@ function makeModelLevely(mf) {
         },
         vclock: {
             private: true,
+            save: false,
+        },
+        bucket: {
+            private: true,
+            save: false,
         },
     });
 

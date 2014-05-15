@@ -33,7 +33,7 @@ The models in this ORM use [VeryModel](https://github.com/fritzy/verymodel). Dul
 ```js
 var dulcimer = require('dulcimer');
 var levelup = require('levelup');
-var db = levelup('./test.db');
+var db = levelup('./test.db', {valueEncoding: 'json'});
 
 var PersonFactory = new dulcimer.Model({
     firstName: {},
@@ -438,7 +438,7 @@ new dulcimer.Model({
     },
     {
         name: 'person',
-        db: levelup(__dirname + '/thisapp.db'),
+        db: levelup(__dirname + '/thisapp.db', {valueEncoding: 'json'}),
     }
 );
 
@@ -455,6 +455,7 @@ This name is used as a prefix within the key store, as well as a string referenc
 __db__
 
 The db field should refer to a [LevelUp](https://github.com/rvagg/node-levelup) or compatible library connection.
+The `valueEncoding` option must be 'json'.
 
 This field or [dbdir](#mo-dbdir) is required.
 

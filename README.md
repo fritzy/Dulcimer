@@ -221,7 +221,7 @@ Example:
 
 ```javascript
 new dulcimer.Model({someDateField: {
-    processIn: function (value) {
+    processOut: function (value) {
         return moment(value);
     },
 })

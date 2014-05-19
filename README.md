@@ -82,6 +82,7 @@ nathan.save(function (err) {
     * [onDelete](#mo-onDelete)
     * [savePrivate](#mo-savePrivate)
     * [saveKey](#mo-saveKey)
+    * [foreignDepth](#mo-foreignDepth)
 * [Options and Callbacks](#options-and-callbacks)
     * [db](#op-db)
     * [bucket](#op-bucket)
@@ -428,6 +429,7 @@ Index:
 * [onDelete](#mo-onDelete)
 * [savePrivate](#mo-savePrivate)
 * [saveKey](#mo-saveKey)
+* [foreignDepth](#mo-foriegnDepth)
 
 Example:
 
@@ -535,6 +537,14 @@ A boolean, false by default, to enable saving of [private](#def-private) fields.
 __saveKey__
 
 A boolean, false by default, to enabling saving the key field within the object.
+
+---
+
+<a name='mo-foreignDepth'></a>
+__foreignDepth__
+
+An integer, 5 by default, to use as the default option for [depth](#op-depth) in a [get](#get) call.
+The represents the depth by which to expand foreign keys recursively during a get.
 
 ---
 

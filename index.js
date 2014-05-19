@@ -33,6 +33,10 @@ function makeModelLevely(mf) {
         throw new Error("Model factories must include a prefix option.");
     }
 
+    if (!mf.options.hasOwnProperty('foreignDepth')) {
+        mf.options.foreignDepth = 5;
+    }
+
     mf.addDefinition({
         key: {
             derive: function () {
@@ -88,7 +92,7 @@ function makeModelLevely(mf) {
             mf.options.db = opts.db = mf.getBucketDB(mf.options.bucket || 'defaultbucket');
         }
         if (typeof opts.depth === 'undefined') {
-            opts.depth = 5;
+            opts.depth = mf.options.foreignDepth;
         }
         opts.prefix = opts.prefix || mf.options.name;
         return opts;

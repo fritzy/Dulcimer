@@ -32,8 +32,8 @@ The models in this ORM use [VeryModel](https://github.com/fritzy/verymodel). Dul
 
 ```js
 var dulcimer = require('dulcimer');
-var levelup = require('levelup');
-var db = levelup('./test.db', {valueEncoding: 'json'});
+var level = require('level');
+var db = level('./test.db', {valueEncoding: 'json'});
 
 var PersonFactory = new dulcimer.Model({
     firstName: {},
@@ -83,6 +83,8 @@ nathan.save(function (err) {
     * [savePrivate](#mo-savePrivate)
     * [saveKey](#mo-saveKey)
     * [foreignDepth](#mo-foreignDepth)
+    * [keyType](#mo-keyType)
+    * [keyGenerator](#mo-keyGenerator)
 * [Options and Callbacks](#options-and-callbacks)
     * [db](#op-db)
     * [bucket](#op-bucket)
@@ -442,7 +444,7 @@ new dulcimer.Model({
     },
     {
         name: 'person',
-        db: levelup(__dirname + '/thisapp.db', {valueEncoding: 'json'}),
+        db: level(__dirname + '/thisapp.db', {valueEncoding: 'json'}),
     }
 );
 
@@ -460,6 +462,7 @@ __db__
 
 The db field should refer to a [LevelUp](https://github.com/rvagg/node-levelup) or compatible library connection.
 The `valueEncoding` option must be 'json'.
+`npm install --save level` will download levelup and the default backend, [leveldown](https://github.com/rvagg/node-leveldown).
 
 This field or [dbdir](#mo-dbdir) is required.
 

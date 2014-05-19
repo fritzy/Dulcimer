@@ -429,7 +429,9 @@ Index:
 * [onDelete](#mo-onDelete)
 * [savePrivate](#mo-savePrivate)
 * [saveKey](#mo-saveKey)
-* [foreignDepth](#mo-foriegnDepth)
+* [foreignDepth](#mo-foreignDepth)
+* [keyType](#mo-keyType)
+* [keyGenerator](#mo-keyGenerator)
 
 Example:
 
@@ -545,6 +547,34 @@ __foreignDepth__
 
 An integer, 5 by default, to use as the default option for [depth](#op-depth) in a [get](#get) call.
 The represents the depth by which to expand foreign keys recursively during a get.
+
+---
+
+<a name='mo-keyType'></a>
+__keyType__
+
+When generating keys, Dulcimer makes a lexically incrementing key, so that keys are in order of insertion by default. To change this to another value set keyType. Right now, the only other option is `uuid`.
+
+```js
+{keyType: 'uuid'}
+```
+
+This will generate uuid-v4 based keys instead.
+
+---
+
+<a name='mo-keyGenerator'></a>
+__keyGenerator__
+
+If you want to override key generation with your own function, set it to keyGenerator.
+
+The only argument is an error first callback that should pass a key.
+
+```js
+{keyGenerator: function (cb) {
+    cb(false, "generate a unique key of some kind here");
+}}
+```
 
 ---
 

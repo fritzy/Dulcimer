@@ -12,14 +12,14 @@
     "underscore": "^1.6.0",
     "verymodel": "^1.8.1",
     "levelup": "^0.18.2",
-    "node-uuid": "~1.4.1",
     "level": "~0.18.0",
     "async": "~0.2.10",
     "base60": "0.0.1",
     "padlock": "~1.1.2",
     "leveldown": "^0.10.2",
     "concat-stream": "^1.4.4",
-    "bignum": "^0.6.2"
+    "bignum": "^0.6.2",
+    "uuid-v4": "^0.1.0"
   },
   "devDependencies": {
     "nodeunit": "0.8.1",

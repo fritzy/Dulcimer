@@ -4,6 +4,7 @@ var db = level(__dirname + '/testdb.db', {valueEncoding: 'json', errorIfExists: 
 var async = require('async');
 var verymodel = require('verymodel');
 var dbstreams = require('../lib/streams');
+var uuid = require('uuid-v4');
 
 process.on('uncaughtException', function (err) {
     console.trace();
@@ -459,6 +460,27 @@ module.exports = {
         tm.name = 'whatever';
         test.equals(tm.name, 'cheese');
         test.done();
+    },
+    "key generator": function (test) {
+        var out;
+        var TM = new dulcimer.Model({idx: {}}, {db: db, prefix: 'keygenerator', keyGenerator: function (cb) {
+            var key = uuid();
+            out = key;
+            cb(false, key);
+        }});
+        var tm = TM.create({idx: 1});
+        tm.save(function (err) {
+            test.equals(tm.key.substr(tm.key.length - out.length), out);
+            test.done();
+        });
+    },
+    "keyType": function (test) {
+        var TM = new dulcimer.Model({idx: {}}, {db: db, prefix: 'keytype', keyType: 'uuid'});
+        var tm = TM.create({idx: 1});
+        tm.save(function (err) {
+            test.ok(uuid.isUUID(tm.key.split('!')[1]));
+            test.done();
+        });
     },
     "Index Range And Filter": function (test) {
         var TM = new dulcimer.Model({idx: {}, date: {index: true}}, {db: db, prefix: 'index-range'});

@@ -7,6 +7,7 @@ var indexes    = require('./lib/indexes');
 var base       = require('./lib/base');
 var children   = require('./lib/children');
 var foreign    = require('./lib/foreign');
+var uuid       = require('uuid-v4');
 
 var model_cache = {};
 
@@ -35,6 +36,12 @@ function makeModelLevely(mf) {
 
     if (!mf.options.hasOwnProperty('foreignDepth')) {
         mf.options.foreignDepth = 5;
+    }
+
+    if (mf.options.keyType === 'uuid') {
+        mf.options.keyGenerator = function (cb) {
+            cb(false, uuid());
+        };
     }
 
     mf.addDefinition({

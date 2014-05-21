@@ -14,8 +14,8 @@ process.on('uncaughtException', function (err) {
 
 module.exports = {
     'Create multiple children': function (test) {
-        var TM = new dulcimer.Model({idx: {}}, {db: db, prefix: 'TM'});
-        var TMC = new dulcimer.Model({cidx: {}}, {db: db, prefix: 'RC'});
+        var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'TM'});
+        var TMC = new dulcimer.Model({cidx: {}}, {db: db, name: 'RC'});
         var tm = TM.create({idx: 1});
         tm.save(function (err) {
             var cidx = 0;
@@ -43,20 +43,20 @@ module.exports = {
         });
     },
     'Custom keyname': function (test) {
-        var TM = new dulcimer.Model({idx: {}}, {db: db, prefix: 'TM'});
+        var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'TM'});
         var tm = TM.create({idx: 'crap', keyname: 'custom'});
         test.equal(tm.key, 'TM!custom');
         test.done();
 
     },
     'Keyname is not undefined': function (test) {
-        var TM = new dulcimer.Model({idx: {}}, {db: db, prefix: 'TM'});
+        var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'TM'});
         var tm = TM.create({idx: 'crap'});
         test.notEqual(tm.key, 'TM!undefined');
         test.done();
     },
     'Delete old index': function (test) {
-        var TM = new dulcimer.Model({idx: {index: true}, name: {}}, {db: db, prefix: 'DOI'});
+        var TM = new dulcimer.Model({idx: {index: true}, name: {}}, {db: db, name: 'DOI'});
         var tm = TM.create({'idx':  'ham', 'name': 'swiss'});
         tm.save(function (err) {
             test.ifError(err);
@@ -78,7 +78,7 @@ module.exports = {
         });
     },
     'Delete key': function (test) {
-        var TM = new dulcimer.Model({idx: {}}, {db: db, prefix: 'TM'});
+        var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'TM'});
         var tm = TM.create({idx: 'crap', keyname: 'custom', index: true});
         test.equal(tm.key, 'TM!custom');
         tm.save(function (err) {
@@ -90,13 +90,13 @@ module.exports = {
         });
     },
     "Don't default with value": function (test) {
-        var TM = new dulcimer.Model({idx: {default: 'crap'}, required: true}, {db: db, prefix: 'DDF'});
+        var TM = new dulcimer.Model({idx: {default: 'crap'}, required: true}, {db: db, name: 'DDF'});
         var tm = TM.create({idx: 'news'});
         test.equals(tm.idx, 'news');
         test.done();
     },
     "Don't default function with value": function (test) {
-        var TM = new dulcimer.Model({idx: {default: function () { return 'crap'; }, required: true}}, {db: db, prefix: 'DDF'});
+        var TM = new dulcimer.Model({idx: {default: function () { return 'crap'; }, required: true}}, {db: db, name: 'DDF'});
         var tm = TM.create({idx: 'news'});
         test.equals(tm.idx, 'news');
         var tmo = tm.toJSON();
@@ -110,7 +110,7 @@ module.exports = {
 
     },
     "Update shouldn't create a duplicate": function (test) {
-        var TM = new dulcimer.Model({idx: {}}, {db: db, prefix: 'ND'});
+        var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'ND'});
         var tm = TM.create({idx: 'hi'});
         tm.save(function (err) {
             TM.update(tm.key, {idx: 'nope'}, function (err, ntm) {
@@ -123,7 +123,7 @@ module.exports = {
         });
     },
     "Update shouldn't create a new if previous isn't found": function (test) {
-        var TM = new dulcimer.Model({idx: {}}, {db: db, prefix: 'ND'});
+        var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'ND'});
         TM.update('xxx', {idx: 'hi'}, function (err, tm) {
             test.ok((err !== undefined));
             test.equals(typeof tm, 'undefined');
@@ -131,7 +131,7 @@ module.exports = {
         });
     },
     "Indexes shouldn't get duplicated": function (test) {
-        var TM = new dulcimer.Model({idx: {index: true}, name: {}}, {db: db, prefix: 'HAM'});
+        var TM = new dulcimer.Model({idx: {index: true}, name: {}}, {db: db, name: 'HAM'});
         var tm = TM.create({idx: 'nope', name: 'ham'});
         tm.save(function (err) {
             TM.update(tm.key, {name: 'cheese'}, function (err, ntm) {
@@ -145,7 +145,7 @@ module.exports = {
         });
     },
     "Deleting one index shouldn't delete all": function (test) {
-        var TM = new dulcimer.Model({idx: {}, name: {index: true}}, {db: db, prefix: 'ATM'});
+        var TM = new dulcimer.Model({idx: {}, name: {index: true}}, {db: db, name: 'ATM'});
         var idx = 0;
         async.whilst(
             function () {
@@ -171,7 +171,7 @@ module.exports = {
         );
     },
     "Test offset and limit": function (test) {
-        var TM = new dulcimer.Model({idx: {}, name: {}}, {db: db, prefix: 'ARP'});
+        var TM = new dulcimer.Model({idx: {}, name: {}}, {db: db, name: 'ARP'});
         var idx = 0;
         async.whilst(
             function () {
@@ -199,7 +199,7 @@ module.exports = {
             name: {}
         }, {
             db: db,
-            prefix: 'onsave',
+            name: 'onsave',
             onSave: function (err, opts, cb) {
                 test.ok(opts.changes.name.changed);
                 test.ok(!opts.changes.idx.changed);
@@ -219,7 +219,7 @@ module.exports = {
             name: {}
         }, {
             db: db,
-            prefix: 'ondel',
+            name: 'ondel',
             onDelete: function (err, opts, cb) {
                 cb(err);
             }
@@ -232,8 +232,8 @@ module.exports = {
         });
     },
     "get by child key": function (test) {
-        var TM = new dulcimer.Model({idx: {}}, {db: db, prefix: 'gbckp'});
-        var TMC = new dulcimer.Model({cidx: {}}, {db: db, prefix: 'childgbcp'});
+        var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'gbckp'});
+        var TMC = new dulcimer.Model({cidx: {}}, {db: db, name: 'childgbcp'});
         var tm = TM.create({idx: 1});
         tm.save(function (err) {
             var tmc = tm.createChild(TMC, {cidx: 2});
@@ -246,7 +246,7 @@ module.exports = {
         });
     },
     "boolean indexes": function (test) {
-        var TM = new dulcimer.Model({idx: {}, thingy: {index: true}}, {db: db, prefix: 'boolidx'});
+        var TM = new dulcimer.Model({idx: {}, thingy: {index: true}}, {db: db, name: 'boolidx'});
         var tm1 = TM.create({idx: 1, thingy: false});
         tm1.save(function (err) {
             var tm2 = TM.create({idx: 2, thingy: true});
@@ -264,7 +264,7 @@ module.exports = {
         });
     },
     "integer indexes": function (test) {
-        var TM = new dulcimer.Model({idx: {index_int: true}, thingy: {}}, {db: db, prefix: 'intidx'});
+        var TM = new dulcimer.Model({idx: {index_int: true}, thingy: {}}, {db: db, name: 'intidx'});
         var tm = TM.create({idx: 3509835098567, thingy: 'Well hello there!'});
         tm.save(function (err) {
             TM.getByIndex('idx', 3509835098567, function (err, tms) {
@@ -275,7 +275,7 @@ module.exports = {
         });
     },
     "index string ordering": function (test) {
-        var TZ = new dulcimer.Model({idx: {}, name: {index: true}}, {db: db, prefix: 'idxorder'});
+        var TZ = new dulcimer.Model({idx: {}, name: {index: true}}, {db: db, name: 'idxorder'});
         var cidx = 0;
         async.eachSeries(['ham', 'cheese', 'zamboni', 'cow', 'nope', 'apple'],
             function (name, acb) {
@@ -300,7 +300,7 @@ module.exports = {
         );
     },
     "index integer ordering": function (test) {
-        var TZ = new dulcimer.Model({idx: {index_int: true}}, {db: db, prefix: 'idxintorder'});
+        var TZ = new dulcimer.Model({idx: {index_int: true}}, {db: db, name: 'idxintorder'});
         var cidx = 0;
         async.eachSeries([24, 100, 1, 244, 24, 34563653, 50],
             function (name, acb) {
@@ -348,7 +348,7 @@ module.exports = {
                 index: true,
             },
         },
-        {db: db, prefix: 'derivefield'});
+        {db: db, name: 'derivefield'});
         var tz = TZ.create({idx: 1, thing1: true, thing2: "hi there", thing3: "yo"});
         tz.save(function (err) {
             TZ.getByIndex('complete', true, function (err, tzs) {
@@ -368,7 +368,7 @@ module.exports = {
 
     },
     "update doValidate": function (test) {
-        var TZ = new dulcimer.Model({idx: {}, email: {type: new verymodel.VeryType().isEmail()}}, {db: db, prefix: 'updatevalidate'});
+        var TZ = new dulcimer.Model({idx: {}, email: {type: new verymodel.VeryType().isEmail()}}, {db: db, name: 'updatevalidate'});
         var tz = TZ.create({idx: 1, email: 'userdoozer.com'});
         tz.save(function (err) {
             TZ.update(tz.key, {email: 'asdfsadham.org'}, {validate: true}, function (err, ntz) {
@@ -384,7 +384,7 @@ module.exports = {
             },
             {
                 dbdir: __dirname,
-                prefix: 'thing'
+                name: 'thing'
             });
         var BucketThing = Thing.bucket('ham');
 
@@ -403,8 +403,8 @@ module.exports = {
         });
     },
     "Submodel test": function (test) {
-        var SM = new dulcimer.Model({name: {}}, {db: db, prefix: 'submodel'});
-        var PM = new dulcimer.Model({name: {}, thing: {foreignKey: SM}}, {db: db, prefix: 'parentmodel'});
+        var SM = new dulcimer.Model({name: {}}, {db: db, name: 'submodel'});
+        var PM = new dulcimer.Model({name: {}, thing: {foreignKey: SM}}, {db: db, name: 'parentmodel'});
         var sm = SM.create({name: 'derp'});
         sm.save(function (err) {
             var pm = PM.create({name: 'herp', thing: sm});
@@ -418,26 +418,28 @@ module.exports = {
         });
     },
     "Collection Test": function (test) {
-        var SM = new dulcimer.Model({name: {}}, {db: db, prefix: 'submodel'});
-        var PM = new dulcimer.Model({name: {}, stuff: {foreignCollection: SM}}, {db: db, prefix: 'parentmodel'});
-        var sm = SM.create({name: 'derp'});
-        sm.save(function (err) {
+        var SM = new dulcimer.Model({name: {}}, {dbdir: __dirname, name: 'submodelcol'});
+        var PM = new dulcimer.Model({name: {}, stuff: {foreignCollection: SM}}, {dbdir: __dirname, name: 'parentmodelcol'});
+        var sm = SM.create({bucket: 'hi', name: 'derp'});
+        sm.save({bucket: 'hi'}, function (err) {
             var  sm2 = SM.create({name: 'lerp'});
-            sm2.save(function (err) {
-                var pm = PM.create({name: 'no more', stuff: [sm, sm2]});
-                pm.save(function (err) {
-                    PM.load(pm.key, function (err, pm2) {
+            sm2.save({bucket: 'hi'}, function (err) {
+                var pm = PM.create({bucket: 'hi', name: 'no more', stuff: [sm.key, sm2.key]});
+                pm.save({bucket: 'hi'}, function (err) {
+                    PM.load(pm.key, {bucket: 'hi'}, function (err, pm2) {
                         test.ok(pm2.stuff[0].name === 'derp');
                         test.ok(pm2.stuff[1].name === 'lerp');
-                        test.done();
+                        PM.all({depth: 2, bucket: 'hi'}, function (err, pms) {
+                            test.done();
+                        });
                     });
                 });
             });
         });
     },
     "Bad Foreign Key": function (test) {
-        var TMa = new dulcimer.Model({idx: {}}, {db: db, prefix: 'bfka'});
-        var TM = new dulcimer.Model({idx: {}, other_id: {foreignKey: TMa, default: {}}, other_col: {foreignCollection: TMa, default: 'lkjsdf'}}, {db: db, prefix: 'bfkb'});
+        var TMa = new dulcimer.Model({idx: {}}, {db: db, name: 'bfka'});
+        var TM = new dulcimer.Model({idx: {}, other_id: {foreignKey: TMa, default: {}}, other_col: {foreignCollection: TMa, default: 'lkjsdf'}}, {db: db, name: 'bfkb'});
         var tm = TM.create({idx: 'ham'});
         tm.save(function (err) {
             TM.load(tm.key, function (err, tm2) {
@@ -446,7 +448,7 @@ module.exports = {
         });
     },
     "Bad Load": function (test) {
-        var TM = new dulcimer.Model({idx: {}}, {db: db, prefix: 'BL'});
+        var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'BL'});
         TM.load({}, function (err, tm) {
             test.done();
         });
@@ -454,7 +456,7 @@ module.exports = {
     "onSet": function (test) {
         var TM = new dulcimer.Model({idx: {}, name: {onSet: function (value) {
             return "cheese";
-        }}}, {db: db, prefix: 'onset'});
+        }}}, {db: db, name: 'onset'});
         var tm = TM.create({idx: 1, name: 'ham'});
         test.equals(tm.name, 'ham');
         tm.name = 'whatever';
@@ -463,7 +465,7 @@ module.exports = {
     },
     "key generator": function (test) {
         var out;
-        var TM = new dulcimer.Model({idx: {}}, {db: db, prefix: 'keygenerator', keyGenerator: function (cb) {
+        var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'keygenerator', keyGenerator: function (cb) {
             var key = uuid();
             out = key;
             cb(false, key);
@@ -475,7 +477,7 @@ module.exports = {
         });
     },
     "keyType": function (test) {
-        var TM = new dulcimer.Model({idx: {}}, {db: db, prefix: 'keytype', keyType: 'uuid'});
+        var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'keytype', keyType: 'uuid'});
         var tm = TM.create({idx: 1});
         tm.save(function (err) {
             test.ok(uuid.isUUID(tm.key.split('!')[1]));
@@ -483,7 +485,7 @@ module.exports = {
         });
     },
     "Index Range And Filter": function (test) {
-        var TM = new dulcimer.Model({idx: {}, date: {index: true}}, {db: db, prefix: 'index-range'});
+        var TM = new dulcimer.Model({idx: {}, date: {index: true}}, {db: db, name: 'index-range'});
         var cidx = 0;
         async.whilst(function () {
             cidx++;
@@ -533,7 +535,7 @@ module.exports = {
         });
     },
     "Wipe test": function (test) {
-        var TM = new dulcimer.Model({idx: {}}, {db: db, prefix: 'wipe'});
+        var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'wipe'});
         var cidx = 0;
         async.whilst(function () {
             cidx++;
@@ -552,7 +554,7 @@ module.exports = {
         });
     },
     "Delete All": function (test) {
-        dbstreams.deleteKeysWithPrefix({db: db, prefix: ""}, function (err) {
+        dbstreams.deleteKeysWithPrefix({db: db, name: ""}, function (err) {
             test.done();
         });
     },

@@ -50,9 +50,9 @@ function makeModelLevely(mf) {
                 var value;
                 if (this.__verymeta.data.key) return this.__verymeta.data.key;
                 if (this.__verymeta.parent) {
-                    value = keylib.joinChild(mf, keylib.joinSep(mf, ('__child__', this.__verymeta.parent.key)), this.__verymeta.prefix, undefined);
+                    value = keylib.joinChild(mf, keylib.joinSep(mf, ('__child__', this.__verymeta.parent.key)), this.__verymeta.name, undefined);
                 } else {
-                    value = this.__verymeta.prefix + (this.__verymeta.sep || '!');
+                    value = this.__verymeta.name + (this.__verymeta.sep || '!');
                 }
                 if (!this.keyname) {
                     return '';

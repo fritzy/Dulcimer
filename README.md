@@ -370,6 +370,9 @@ new dulcimer.Model({
 });
 ```
 
+:heavy\_exclamation\_mark: Warning! Assigning mutable objects as a default can result in the default getting changed over time.
+When assigning objects, arrays, or essentially any advanced type, set default to a function that returns a new instance of the object.
+
 ----
 
 <a name='def-save'></a>

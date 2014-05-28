@@ -647,6 +647,7 @@ This limits the number of results in a read call.
 __sortBy__
 
 `sortBy` must be an indexed field. The results of a read call are sorted by the value of this field.
+Sorted results should be much faster than sorting after retrieval, as indexes are presorted in the db.
 
 ----
 
@@ -1007,6 +1008,7 @@ Person.findByIndex('phoneNumber', '509-555-5555', function (err, person) {
 __allSortByIndex(field, options, callback)__
 
 Just like [all](#all) with the [sortBy](#op-sortBy) option.
+Sorted results should be much faster than sorting after retrieval, as indexes are presorted in the db.
 
 Arguments:
 

@@ -117,6 +117,7 @@ module.exports = {
                 test.equals(tm.key, ntm.key);
                 TM.all(function (err, tms, info) {
                     test.equals(tms.length, 1);
+                    test.equals(info.total, 1);
                     test.done();
                 });
             });

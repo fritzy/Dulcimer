@@ -108,6 +108,7 @@ nathan.save(function (err) {
     * [wipe](#wipe)
     * [getByIndex](#getByIndex)
     * [findByIndex](#findByIndex)
+    * [allSortByIndex](#allSortByIndex)
 * [Model Instance Methods](#model-instance-methods)
     * [save](#save)
     * [delete](#delete)
@@ -726,6 +727,7 @@ A boolean, when true, causes a read function to return an object stream, and cal
 
 ----
 
+<a name='model-factory-methods'></a>
 ## Model Factory Methods
 
 * [create](#create)
@@ -736,6 +738,7 @@ A boolean, when true, causes a read function to return an object stream, and cal
 * [wipe](#wipe)
 * [getByIndex](#getByIndex)
 * [findByIndex](#findByIndex)
+* [allSortByIndex](#allSortByIndex)
 
 <a name="create"></a>
 __create(value_object)__
@@ -997,6 +1000,39 @@ Person.findByIndex('phoneNumber', '509-555-5555', function (err, person) {
     } else {
         console.log("Unable to find person with that phone number.");
     }
+});
+```
+
+<a name="allSortByIndex"></a>
+__allSortByIndex(field, options, callback)__
+
+Just like [all](#all) with the [sortBy](#op-sortBy) option.
+
+Arguments:
+
+* field: indexed field to sort by
+* options
+* callback -- `function (err, model)`
+
+Callback Arguments:
+
+1. __err__: Set only if there was an error.
+2. __model__: Model instance if an index of the specified value was found. Otherwise `undefined`.
+
+Options:
+
+* [db](#op-db)
+* [bucket](#op-bucket)
+* [offset](#op-offset)
+* [limit](#op-limit)
+* [reverse](#op-reverse)
+* [filter](#op-filter)
+* [depth](#op-depth)
+* [returnStream](#op-returnStream)
+
+```javascript
+Person.allSortBy('phoneNumber', {reverse: true}, function (err, persons) {
+    //persons sorted by phone # in reverse
 });
 ```
 

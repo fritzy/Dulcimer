@@ -109,6 +109,7 @@ nathan.save(function (err) {
     * [getByIndex](#getByIndex)
     * [findByIndex](#findByIndex)
     * [allSortByIndex](#allSortByIndex)
+    * [getTotal](#getTotal)
 * [Model Instance Methods](#model-instance-methods)
     * [save](#save)
     * [delete](#delete)
@@ -300,7 +301,7 @@ These fields are saved as their key, but when loaded expanded out to be a model 
 
 When assigning values to this field, you can either assign a model instance or a key string.
 
-Example: 
+Example:
 
 ```js
 new dulcimer.Model({
@@ -319,7 +320,7 @@ Values are saved as an array of key strings, and expanded out by when the model 
 
 When assigning values to these fields, you may either assign an array of model instances or an array of key strings.
 
-Example: 
+Example:
 
 ```js
 new dulcimer.Model({
@@ -491,7 +492,7 @@ __onSave__
 
 `{onSave: function (err, details, done) { } }`
 
-The details object contains: 
+The details object contains:
 
     {
         model: model-instance,
@@ -740,6 +741,7 @@ A boolean, when true, causes a read function to return an object stream, and cal
 * [getByIndex](#getByIndex)
 * [findByIndex](#findByIndex)
 * [allSortByIndex](#allSortByIndex)
+* [getTotal](#getTotal)
 
 <a name="create"></a>
 __create(value_object)__
@@ -777,7 +779,7 @@ __get(key, options, callback)__
 
 Get a specific model instance by key.
 
-Arguments: 
+Arguments:
 
 * key
 * options
@@ -933,7 +935,7 @@ __getByIndex(field, value, options, callback)__
 
 Gets the models by an index.
 
-Arguments: 
+Arguments:
 
 * field: indexed field
 * value: value to match
@@ -1035,6 +1037,38 @@ Options:
 ```javascript
 Person.allSortBy('phoneNumber', {reverse: true}, function (err, persons) {
     //persons sorted by phone # in reverse
+});
+```
+
+----
+
+<a name="getTotal"></a>
+__getTotal(options, callback)__
+
+Get the total count of all keys.
+
+Arguments:
+
+* options
+* callback: `function (err, count)`
+
+Callback Arguments:
+
+1. __err__: Set only if there was an error.
+2. __count__: A total count of all keys.
+
+Options:
+
+* [db](#op-db)
+* [bucket](#op-bucket)
+
+Example:
+
+```js
+Person.getTotal(function (err, count) {
+    if (!err) {
+        console.log(count);
+    }
 });
 ```
 
@@ -1388,4 +1422,3 @@ person.loadData({
 console.log(person.toJSON());
 // {firstName: 'Nathan', lastName: 'Fritz', favoriteFood: 'burrito', favoriteColor: 'green'}
 ```
-

@@ -1047,6 +1047,14 @@ Node.js is not threaded, but it is asynchronous. This can make database access i
 The issue requires you you to understand some subleties about the event stack.
 Anytime you're updating a value based on get(s), you should lock around these operations to prevent the operation from changing under you.
 
+An incrementer is a good example.
+You have to read the previous value, and update based on that.
+But what if, when the process goes back to the event loop when you call save, an function runs that changes the value?
+Now that value is lost.
+
+Duclimer keeps an internal lock for writes that `runWithLock` that runWithLock acquires for you to solve problems like this.
+runWithLock queus other locking calls until you `unlock()`
+
 :heavy\_exclamation\_mark: Within a locked function, anytime you call [save](#save) or [delete](#delete) use the option `withoutLock` set to `true`. You need to do this because you already have a write lock. This is the **ONLY** time you should do so.
 
 Arguments:

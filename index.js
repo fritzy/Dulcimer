@@ -14,6 +14,10 @@ var model_cache = {};
 function makeModelLevely(mf) {
     mf.options.savelock = new Padlock();
 
+    mf.runWithLock = function (callback) {
+        mf.options.savelock.runwithlock(callback, [mf.options.savelock.release.bind(mf.options.savelock)]);
+    };
+
     mf.getBucketDB = function (bucket) {
         if (mf.options.dbdir.substr(-1) !== '/') {
             mf.options.dbdir += '/';

@@ -110,6 +110,7 @@ nathan.save(function (err) {
     * [findByIndex](#findByIndex)
     * [allSortByIndex](#allSortByIndex)
     * [getTotal](#getTotal)
+    * [runWithLock](#runWithLock)
 * [Model Instance Methods](#model-instance-methods)
     * [save](#save)
     * [delete](#delete)
@@ -742,6 +743,7 @@ A boolean, when true, causes a read function to return an object stream, and cal
 * [findByIndex](#findByIndex)
 * [allSortByIndex](#allSortByIndex)
 * [getTotal](#getTotal)
+* [runWithLock](#runWithLock)
 
 <a name="create"></a>
 __create(value_object)__
@@ -1072,6 +1074,49 @@ Person.getTotal(function (err, count) {
 });
 ```
 
+<a name="runWithLock"></a>
+__runWithLock(callback)__
+
+Node.js is not threaded, but it is asynchronous. This can make database access in keystores hazardous.
+The issue requires you you to understand some subleties about the event stack.
+Anytime you're updating a value based on get(s), you should lock around these operations to prevent the operation from changing under you.
+
+An incrementer is a good example.
+You have to read the previous value, and update based on that.
+But what if, when the process goes back to the event loop when you call save, an function runs that changes the value?
+Now that value is lost.
+
+Duclimer keeps an internal lock for writes that `runWithLock` that runWithLock acquires for you to solve problems like this.
+runWithLock queus other locking calls until you `unlock()`
+
+:heavy\_exclamation\_mark: Within a locked function, anytime you call [save](#save) or [delete](#delete) use the option `withoutLock` set to `true`. You need to do this because you already have a write lock. This is the **ONLY** time you should do so.
+
+Arguments:
+
+* callback: the function you want to run without any async steps undone before the next time
+
+Callback Arguments:
+
+* unlock: function to call when all of your async operations are done to release the lock
+
+Example:
+
+```javascript
+function Increment(key, amount, cb) {
+    SomeModelFactory.runWithLock(function (unlock) {
+        SomeModelFactory.get(key, function (err, model) {
+            model.count += amount;
+            //note the withoutLock
+            model.save({withoutLock: true}, function (err) {
+                unlock(); //if you don't do this, this function will only be able to run once.. ever!
+                cb(err, model.count);
+            });
+        });
+    });
+}
+```
+:heavy\_exclamation\_mark: Make sure that the end of all of your code flows end in an `unlock()` if you're using if statements!
+
 ## Model Instance Methods
 
 * [save](#save)
@@ -1114,6 +1159,7 @@ Options:
 * [db](#op-db)
 * [bucket](#op-bucket)
 * [ctx](#op-ctx)
+* withoutLock: only set to true if you're running save within a runWithLock block.
 
 
 :heavy\_exclamation\_mark: Foreign objects are not saved.
@@ -1155,6 +1201,7 @@ Options:
 * [db](#op-db)
 * [bucket](#op-bucket)
 * [ctx](#op-ctx)
+* withoutLock: only set to true if you're running save within a runWithLock block.
 
 Example:
 

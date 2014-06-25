@@ -535,6 +535,33 @@ module.exports = {
             });
         });
     },
+    "User locking": function (test) {
+        var TM = new dulcimer.Model({count: {}}, {db: db, name: 'userlock'});
+        var increment = function (model, amount, cb) {
+            TM.runWithLock(function (unlock) {
+                TM.get(model.key, function (err, tm) {
+                    tm.count += amount;
+                    tm.save(function (err) {
+                        unlock(); //removing this causes tests undone
+                        cb(err, tm.count);
+                    });
+                });
+            });
+        };
+
+        var tm = TM.create({count: 0});
+        tm.save(function (err) {
+            //yes, each runs the next one before the first ecb
+            async.each([10,10,10,10,5,3], function (amount, ecb) {
+                increment(tm, amount, ecb);
+            }, function (err) {
+                TM.get(tm.key, function (err, tm) {
+                    test.equals(48, tm.count);
+                    test.done();
+                });
+            });
+        });
+    },
     "Wipe test": function (test) {
         var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'wipe'});
         var cidx = 0;

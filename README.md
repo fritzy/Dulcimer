@@ -109,6 +109,7 @@ nathan.save(function (err) {
     * [getByIndex](#getByIndex)
     * [findByIndex](#findByIndex)
     * [allSortByIndex](#allSortByIndex)
+    * [runWithLock](#runWithLock)
 * [Model Instance Methods](#model-instance-methods)
     * [save](#save)
     * [delete](#delete)
@@ -740,6 +741,7 @@ A boolean, when true, causes a read function to return an object stream, and cal
 * [getByIndex](#getByIndex)
 * [findByIndex](#findByIndex)
 * [allSortByIndex](#allSortByIndex)
+* [runWithLock](#runWithLock)
 
 <a name="create"></a>
 __create(value_object)__
@@ -1038,6 +1040,41 @@ Person.allSortBy('phoneNumber', {reverse: true}, function (err, persons) {
 });
 ```
 
+<a name="runWithLock"></a>
+__runWithLock(callback)__
+
+Node.js is not threaded, but it is asynchronous. This can make database access in keystores hazardous.
+The issue requires you you to understand some subleties about the event stack.
+Anytime you're updating a value based on get(s), you should lock around these operations to prevent the operation from changing under you.
+
+:heavy\_exclamation\_mark: Within a locked function, anytime you call [save](#save) or [delete](#delete) with the option `withoutLock` set to `true`. This is the **ONLY** time you should do so.
+
+Arguments:
+
+* callback: the function you want to run without any async steps undone before the next time
+
+Callback Arguments:
+
+* unlock: function to call when all of your async operations are done to release the lock
+
+Example:
+
+```javascript
+function Increment(key, amount, cb) {
+    SomeModelFactory.runWithLock(function (unlock) {
+        SomeModelFactory.get(key, function (err, model) {
+            model.count += amount;
+            model.save({withoutLock: true}, function (err) {
+                unlock(); //if you don't do this, this function will only be able to run once.. ever!
+                cb(err, tm.count);
+            });
+        });
+    });
+}
+```
+:heavy\_exclamation\_mark: Make sure that the end of all of your code flows end in an `unlock()` if you're using if statements!
+
+
 ## Model Instance Methods
 
 * [save](#save)
@@ -1080,6 +1117,7 @@ Options:
 * [db](#op-db)
 * [bucket](#op-bucket)
 * [ctx](#op-ctx)
+* withoutLock: only set to true if you're running save within a runWithLock block.
 
 
 :heavy\_exclamation\_mark: Foreign objects are not saved.
@@ -1121,6 +1159,7 @@ Options:
 * [db](#op-db)
 * [bucket](#op-bucket)
 * [ctx](#op-ctx)
+* withoutLock: only set to true if you're running save within a runWithLock block.
 
 Example:
 

@@ -13,10 +13,9 @@ var model_cache = {};
 
 function makeModelLevely(mf) {
     mf.options.savelock = new Padlock();
-    mf.options.userlock = new Padlock();
 
     mf.runWithLock = function (callback) {
-        mf.options.userlock.runwithlock(callback, [mf.options.userlock.release.bind(mf.options.userlock)]);
+        mf.options.savelock.runwithlock(callback, [mf.options.savelock.release.bind(mf.options.savelock)]);
     };
 
     mf.getBucketDB = function (bucket) {

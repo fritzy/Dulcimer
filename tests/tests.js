@@ -541,7 +541,7 @@ module.exports = {
             TM.runWithLock(function (unlock) {
                 TM.get(model.key, function (err, tm) {
                     tm.count += amount;
-                    tm.save(function (err) {
+                    tm.save({withoutLock: true}, function (err) {
                         unlock(); //removing this causes tests undone
                         cb(err, tm.count);
                     });

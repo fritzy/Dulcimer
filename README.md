@@ -1047,7 +1047,7 @@ Node.js is not threaded, but it is asynchronous. This can make database access i
 The issue requires you you to understand some subleties about the event stack.
 Anytime you're updating a value based on get(s), you should lock around these operations to prevent the operation from changing under you.
 
-:heavy\_exclamation\_mark: Within a locked function, anytime you call [save](#save) or [delete](#delete) with the option `withoutLock` set to `true`. This is the **ONLY** time you should do so.
+:heavy\_exclamation\_mark: Within a locked function, anytime you call [save](#save) or [delete](#delete) use the option `withoutLock` set to `true`. You need to do this because you already have a write lock. This is the **ONLY** time you should do so.
 
 Arguments:
 

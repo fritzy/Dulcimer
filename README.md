@@ -1064,9 +1064,10 @@ function Increment(key, amount, cb) {
     SomeModelFactory.runWithLock(function (unlock) {
         SomeModelFactory.get(key, function (err, model) {
             model.count += amount;
+            //note the withoutLock
             model.save({withoutLock: true}, function (err) {
                 unlock(); //if you don't do this, this function will only be able to run once.. ever!
-                cb(err, tm.count);
+                cb(err, model.count);
             });
         });
     });

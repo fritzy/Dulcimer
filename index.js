@@ -8,6 +8,7 @@ var base       = require('./lib/base');
 var children   = require('./lib/children');
 var foreign    = require('./lib/foreign');
 var uuid       = require('uuid-v4');
+var LevelDulcimer = require('level-dulcimer');
 
 var model_cache = {};
 
@@ -18,31 +19,19 @@ function makeModelLevely(mf) {
         mf.options.savelock.runwithlock(callback, [mf.options.savelock.release.bind(mf.options.savelock)]);
     };
 
-    mf.getBucketDB = function (bucket) {
-        if (mf.options.dbdir.substr(-1) !== '/') {
-            mf.options.dbdir += '/';
-        }
-        return getDBPath(mf.options.dbdir + bucket + '.db');
+    mf.connectLevelPath = function (path) {
+        this.options.db = LevelDulcimer(path);
     };
 
-    if (mf.options.dbdir) {
-        mf.options.db = mf.getBucketDB(mf.options.bucket || 'defaultbucket');
-    }
-
-    //for historical reasons, support prefix and name
-    if (!mf.options.name) {
-        mf.options.name = mf.options.prefix;
-    }
-
     if (typeof mf.options.name !== 'string') {
-        throw new Error("Model factories must include a prefix option.");
+        throw new Error("Model factories must include a name option.");
     }
 
     if (!mf.options.hasOwnProperty('foreignDepth')) {
         mf.options.foreignDepth = 5;
     }
 
-    if (mf.options.keyType === 'uuid') {
+    if ((mf.options.keyType === 'uuid' || typeof mf.options.keyType === 'undefined') && typeof mf.options.keyGenerator === 'undefined') {
         mf.options.keyGenerator = function (cb) {
             cb(false, uuid());
         };
@@ -50,24 +39,7 @@ function makeModelLevely(mf) {
 
     mf.addDefinition({
         key: {
-            derive: function () {
-                var value;
-                if (this.__verymeta.data.key) return this.__verymeta.data.key;
-                if (this.__verymeta.parent) {
-                    value = keylib.joinChild(mf, keylib.joinSep(mf, ('__child__', this.__verymeta.parent.key)), this.__verymeta.name, undefined);
-                } else {
-                    value = this.__verymeta.name + (this.__verymeta.sep || '!');
-                }
-                if (!this.keyname) {
-                    return '';
-                }
-                value += this.keyname;
-                return value;
-            },
-            private: !mf.options.includeKey,
-        },
-        keyname: {
-            private: !mf.options.includeKey,
+            private: true,
         },
         vclock: {
             private: true,
@@ -85,12 +57,10 @@ function makeModelLevely(mf) {
         } else {
             opts.cb = callback;
         }
-        if (opts.bucket && mf.options.dbdir) {
-            opts.db = mf.getBucketDB(opts.bucket);
-        } else if (!opts.db) {
+        if (!opts.db) {
             opts.db = mf.options.db;
         }
-        if (opts.db.isRiak && !opts.bucket) {
+        if (!opts.bucket) {
             opts.bucket = mf.options.bucket || 'default';
         }
         if (typeof opts.cb !== 'function') {
@@ -98,9 +68,6 @@ function makeModelLevely(mf) {
         }
         if (!opts.db) {
             throw new Error("Model factories must include a db option of a levelup instance with valueEncoding of json.");
-        }
-        if (opts.db.isClosed() && !opts.bucket.isRiak) {
-            mf.options.db = opts.db = mf.getBucketDB(mf.options.bucket || 'defaultbucket');
         }
         if (typeof opts.depth === 'undefined') {
             opts.depth = mf.options.foreignDepth;

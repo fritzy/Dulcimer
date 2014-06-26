@@ -513,7 +513,6 @@ module.exports = {
                 },
                 function (scb) {
                     TM.all({filter: function (tm) {
-                        console.log(tm.date);
                         var day = tm.date.split('-');
                         day = day[day.length - 1];
                         if (parseInt(day, 10) % 2 === 0) {
@@ -522,9 +521,6 @@ module.exports = {
                             return false;
                         }
                     }, sortBy: 'date'}, function (err, tms) {
-                        //tms.forEach(function (tm) {
-                        //    console.log(tm.date);
-                        //});
                         test.equals(tms[0].date, '2014-02-12');
                         test.equals(tms[1].date, '2014-02-14');
                         test.equals(tms[2].date, '2014-02-16');

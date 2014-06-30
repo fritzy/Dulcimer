@@ -68,7 +68,7 @@ module.exports = {
                     test.ifError(err);
                     TM.getByIndex('idx', 'ham', function (err, tms) {
                         test.ok(Array.isArray(tms) && tms.length === 0);
-                        TM.getByIndex('idx', 'salami', function (err, tms) {
+                        TM.getByIndex('idx', 'salami', function (err, tms, total) {
                             test.equals(tms.length, 1);
                             test.done();
                         });

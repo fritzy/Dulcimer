@@ -343,7 +343,8 @@ Example:
 
 ```js
 new dulcimer.Model({
-    comment: {'string',
+    comment: {
+        type: 'string',
         required: true,
         default: "User has nothing to say."
     },
@@ -362,7 +363,8 @@ In function form, `default` behaves similiarly to `derive`, except that it only 
 
 ```js
 new dulcimer.Model({
-    comment: {'string',
+    comment: {
+        type: 'string',
         required: true,
         default: function () {
             return this.author.fullName + ' has nothing to say.';

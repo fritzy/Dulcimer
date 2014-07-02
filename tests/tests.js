@@ -1,6 +1,6 @@
 var dulcimer = require('../index.js');
 var LevelDulcimer = require('level-dulcimer');
-var db = LevelDulcimer(__dirname + '/testdb.db');
+var db = dulcimer.connect(__dirname + '/testdb.db');
 var async = require('async');
 var verymodel = require('verymodel');
 var dbstreams = require('../lib/streams');
@@ -14,8 +14,8 @@ process.on('uncaughtException', function (err) {
 
 module.exports = {
     'Create multiple children': function (test) {
-        var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'TM'});
-        var TMC = new dulcimer.Model({cidx: {}}, {db: db, name: 'RC'});
+        var TM = new dulcimer.Model({idx: {}}, {name: 'TM'});
+        var TMC = new dulcimer.Model({cidx: {}}, {name: 'RC'});
         var tm = TM.create({idx: 1});
         tm.save(function (err) {
             var cidx = 0;
@@ -43,7 +43,7 @@ module.exports = {
         });
     },
     'Custom keyname': function (test) {
-        var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'TM'});
+        var TM = new dulcimer.Model({idx: {}}, {name: 'TM'});
         var tm = TM.create({idx: 'crap', key: 'custom'});
         test.equal(tm.key, 'custom');
         test.done();

@@ -43,6 +43,30 @@ module.exports = {
             });
         });
     },
+    'Get Children By Index': function (test) {
+        var TM = new dulcimer.Model({idx: {}}, {name: 'TMI'});
+        var TMC = new dulcimer.Model({cidx: {type: 'integer', index: true}}, {name: 'RCI'});
+        var tm = TM.create({idx: 1});
+        tm.save(function (err) {
+            var cidx = 0;
+            async.whilst(function () {
+                cidx++;
+                return cidx <= 10;
+            },
+            function (acb) {
+                var tmc = tm.createChild(TMC, {cidx: cidx % 2});
+                tmc.save(function (err) {
+                    acb(err);
+                });
+            },
+            function (err) {
+                tm.getChildrenByIndex(TMC, 'cidx', 1, function (err, children, info) {
+                    test.equal(children.length, 5, "Not all children found (" + children.length + ")");
+                    test.done();
+                });
+            });
+        });
+    },
     'Custom keyname': function (test) {
         var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'TM'});
         var tm = TM.create({idx: 'crap', key: 'custom'});

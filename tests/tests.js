@@ -42,6 +42,30 @@ module.exports = {
             });
         });
     },
+    'Get Children By Index': function (test) {
+        var TM = new dulcimer.Model({idx: {}}, {name: 'TMI'});
+        var TMC = new dulcimer.Model({cidx: {type: 'integer', index: true}}, {name: 'RCI'});
+        var tm = TM.create({idx: 1});
+        tm.save(function (err) {
+            var cidx = 0;
+            async.whilst(function () {
+                cidx++;
+                return cidx <= 10;
+            },
+            function (acb) {
+                var tmc = tm.createChild(TMC, {cidx: cidx % 2});
+                tmc.save(function (err) {
+                    acb(err);
+                });
+            },
+            function (err) {
+                tm.getChildrenByIndex(TMC, 'cidx', 1, function (err, children, info) {
+                    test.equal(children.length, 5, "Not all children found (" + children.length + ")");
+                    test.done();
+                });
+            });
+        });
+    },
     'Custom keyname': function (test) {
         var TM = new dulcimer.Model({idx: {}}, {name: 'TM'});
         var tm = TM.create({idx: 'crap', key: 'custom'});
@@ -377,32 +401,6 @@ module.exports = {
             });
         });
     },
-    /*
-    "Bucket function": function (test) {
-        var Thing = new dulcimer.Model({
-                testfield: {}
-            },
-            {
-                dbdir: __dirname,
-                name: 'thing'
-            });
-        var BucketThing = Thing.bucket('ham');
-
-        var x = BucketThing.create({testfield: 'beer'});
-        x.save(function (err) {
-            BucketThing.load(x.key, function (err, thing) {
-                test.ok(BucketThing.options.db.location.indexOf("ham.db", BucketThing.options.db.location.length - "ham.db".length) !== -1);
-                test.ok(Thing.options.db.location.indexOf("defaultbucket.db", Thing.options.db.location.length - "defaultbucket.db".length) !== -1);
-                test.equals(thing.testfield, 'beer');
-                Thing.load(x.key, {bucket: 'ham'}, function (err, thing2) {
-                    test.equals(thing2.testfield, 'beer');
-                    test.ok(Thing.options.db.location.indexOf("defaultbucket.db", Thing.options.db.location.length - "defaultbucket.db".length) !== -1);
-                    test.done();
-                });
-            });
-        });
-    },
-    */
     "Submodel test": function (test) {
         var SM = new dulcimer.Model({name: {}}, {db: db, name: 'submodel'});
         var PM = new dulcimer.Model({name: {}, thing: {foreignKey: SM}}, {db: db, name: 'parentmodel'});

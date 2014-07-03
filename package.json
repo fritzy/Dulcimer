@@ -20,9 +20,8 @@
     "concat-stream": "^1.4.4",
     "bignum": "^0.6.2",
     "uuid-v4": "^0.1.0",
-    "level-dulcimer": "^1.1.2",
-    "riak-dulcimer": "^0.1.2",
-    "level-bucketarray": "^1.0.0"
+    "level-dulcimer": "^1.1.4",
+    "riak-dulcimer": "^0.1.2"
   },
   "devDependencies": {
     "nodeunit": "0.8.1",

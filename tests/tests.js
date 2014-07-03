@@ -32,6 +32,10 @@ module.exports = {
             function (err) {
                 tm.getChildren(TMC, function (err, children, info) {
                     test.equal(children.length, 10, "Not all children found (" + children.length + ")");
+                    children.forEach(function(child) {
+                        test.equals(child.key.indexOf('!'), -1);
+                        test.equals(child.key.indexOf('_'), -1);
+                    });
                     children[0].delete(function (err) {
                         tm.getChildren(TMC, function (err, children, info) {
                             test.equal(info.total, 9);
@@ -334,6 +338,10 @@ module.exports = {
             },
             function (err) {
                 TZ.allSortByIndex('idx', function (err, nums) {
+                    nums.forEach(function(num) {
+                        test.equals(num.key.indexOf('!'), -1);
+                        test.equals(num.key.indexOf('_'), -1);
+                    });
                     test.ifError(err);
                     test.equals(nums.length, 7);
                     test.equals(nums[0].idx, 1);

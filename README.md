@@ -76,7 +76,6 @@ nathan.save(function (err) {
 * [Model Options](#model-options)
     * [name](#mo-name)
     * [db](#mo-db)
-    * [dbdir](#mo-dbdir)
     * [bucket](#mo-bucket)
     * [onSave](#mo-onSave)
     * [onDelete](#mo-onDelete)
@@ -115,6 +114,7 @@ nathan.save(function (err) {
     * [save](#save)
     * [delete](#delete)
     * [createChild](#createChild)
+    * [getChild](#getChild)
     * [getChildren](#getChildren)
     * [getChildrenByIndex](#getChildrenByIndex)
     * [findChildByIndex](#findChildByIndex)
@@ -418,7 +418,7 @@ Model options are the second argument of the `VeryLevelModel` constructor.
 Requirements:
 
 * Models must have a name option.
-* Models must have a db or a dbdir.
+* Models must have a db.
 * Models may have a bucket. You may also define buckets elsewhere if dynamic.
 
 __Note__: Multiple models can and should use the same bucket.
@@ -431,7 +431,6 @@ Index:
 
 * [name](#mo-name)
 * [db](#mo-db)
-* [dbdir](#mo-dbdir)
 * [bucket](#mo-bucket)
 * [onSave](#mo-onSave)
 * [onDelete](#mo-onDelete)
@@ -468,16 +467,6 @@ __db__
 
 The db field should refer to a [LevelUp](https://github.com/rvagg/node-levelup) or compatible library connection.
 The `valueEncoding` option must be 'json'.
-`npm install --save level` will download levelup and the default backend, [leveldown](https://github.com/rvagg/node-leveldown).
-
-This field or [dbdir](#mo-dbdir) is required.
-
----
-
-<a name='mo-dbdir'></a>
-__dbdir__
-
-This field should be a full directory path in which to store the databases if you're using buckets.
 
 ---
 
@@ -620,14 +609,14 @@ Callbacks are always required on functions that include them, and lead with an e
 <a name='op-db'></a>
 __db__
 
-This option overrides the current database defined with mf.options.db or mf.options.dbdir + mf.options.bucket for the current call.
+This option overrides the current database defined with [options.db](#mo-db) for the current call.
 
 ----
 
 <a name='op-bucket'></a>
 __bucket__
 
-This overrides the current database defined with mf.options.dbdir + mfoptions.bucket.
+This overrides the current bucket.
 
 ----
 

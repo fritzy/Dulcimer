@@ -44,8 +44,8 @@ module.exports = {
         });
     },
     'Get Children By Index': function (test) {
-        var TM = new dulcimer.Model({idx: {}}, {name: 'TMI'});
-        var TMC = new dulcimer.Model({cidx: {type: 'integer', index: true}}, {name: 'RCI'});
+        var TM = new dulcimer.Model({idx: {}}, {name: 'TMI', db: db});
+        var TMC = new dulcimer.Model({cidx: {type: 'integer', index: true}}, {name: 'RCI', db: db});
         var tm = TM.create({idx: 1});
         tm.save(function (err) {
             var cidx = 0;

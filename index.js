@@ -28,9 +28,9 @@ function makeModelLevely(mf) {
             opts = {path: opts, type: 'level'};
         }
         if (typeof opts.type === 'undefined' || opts.type === 'level') {
-            db = LevelDulcimer(opts.path);
+            mf.options.db = LevelDulcimer(opts.path);
         } else if (opts.type === 'riak') {
-            db = RiakDulcimer(util.format("riak://%s:%d/%s", opts.host, opts.port, opts.bucket || default_bucket || 'default'));
+            mf.options.db = RiakDulcimer(util.format("riak://%s:%d/%s", opts.host, opts.port, opts.bucket || default_bucket || 'default'));
         } else {
             throw Error("Invalid DB Specification");
         }

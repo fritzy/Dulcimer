@@ -419,7 +419,7 @@ Example:
 
 ```js
 new dulcimer.Model({
-    comment: {'string'},
+    comment: {type: 'string'},
     author: {foreignKey: 'user'},
 });
 ```
@@ -438,7 +438,7 @@ Example:
 
 ```js
 new dulcimer.Model({
-    comment: {'string'},
+    comment: {type: 'string'},
     author: {foreignKey: 'user'},
     starredBy: {foreignCollection: 'user'}
 });

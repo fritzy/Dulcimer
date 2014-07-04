@@ -23,7 +23,6 @@ function makeModelLevely(mf) {
     };
 
     mf.connect = function (opts) {
-        var db;
         if (typeof opts === 'string') {
             opts = {path: opts, type: 'level'};
         }
@@ -34,6 +33,7 @@ function makeModelLevely(mf) {
         } else {
             throw Error("Invalid DB Specification");
         }
+        return mf.options.db;
     };
 
     if (typeof mf.options.name !== 'string') {

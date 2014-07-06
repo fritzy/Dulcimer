@@ -148,8 +148,10 @@ nathan.save(function (err) {
     * [loadData](#loadData)
 
 ## Installing
+
 `npm install dulcimer`
-<a name="connect"></a>
+
+<a name="connecting"></a>
 ### Connecting to a Database
 
 <a name="conn-level"></a>

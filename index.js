@@ -4,6 +4,7 @@ var keylib     = require('./lib/keys');
 var underscore = require('underscore');
 var getDBPath  = require('./lib/dbpool');
 var indexes    = require('./lib/indexes');
+var importexport = require ('./lib/importexport');
 var base       = require('./lib/base');
 var children   = require('./lib/children');
 var foreign    = require('./lib/foreign');
@@ -113,6 +114,7 @@ function makeModelLevely(mf) {
     base(mf);
     children(mf);
     foreign(mf);
+    importexport(mf);
     
     mf.bucket = function (bucket) {
         var opts = underscore.clone(mf.options);

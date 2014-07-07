@@ -19,7 +19,9 @@
     "leveldown": "^0.10.2",
     "concat-stream": "^1.4.4",
     "bignum": "^0.6.2",
-    "uuid-v4": "^0.1.0"
+    "uuid-v4": "^0.1.0",
+    "JSONStream": "^0.8.4",
+    "optimist": "^0.6.1"
   },
   "devDependencies": {
     "nodeunit": "0.8.1",

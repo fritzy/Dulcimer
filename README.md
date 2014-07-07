@@ -1080,7 +1080,7 @@ Person.getTotal(function (err, count) {
 __runWithLock(callback)__
 
 Node.js is not threaded, but it is asynchronous. This can make database access in keystores hazardous.
-The issue requires you you to understand some subleties about the event stack.
+The issue requires you to understand some subleties about the event stack.
 Anytime you're updating a value based on get(s), you should lock around these operations to prevent the operation from changing under you.
 
 An incrementer is a good example.
@@ -1227,7 +1227,7 @@ They're great for revision logs, comments, etc.
 Example:
 
 ```javascript
-var comment = person.createChild(Comment{
+var comment = person.createChild(Comment, {
     body: "I think that guy is pretty great.",
     author: otherperson,
 });

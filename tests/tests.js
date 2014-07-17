@@ -1,6 +1,6 @@
 var dulcimer = require('../index.js');
-var level = require('level');
-var db = level(__dirname + '/testdb.db', {valueEncoding: 'json', errorIfExists: true});
+var LevelDulcimer = require('level-dulcimer');
+var db = dulcimer.connect(__dirname + '/testdb.db');
 var async = require('async');
 var verymodel = require('verymodel');
 var dbstreams = require('../lib/streams');
@@ -14,8 +14,8 @@ process.on('uncaughtException', function (err) {
 
 module.exports = {
     'Create multiple children': function (test) {
-        var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'TM'});
-        var TMC = new dulcimer.Model({cidx: {}}, {db: db, name: 'RC'});
+        var TM = new dulcimer.Model({idx: {}}, {name: 'TM'});
+        var TMC = new dulcimer.Model({cidx: {}}, {name: 'RC'});
         var tm = TM.create({idx: 1});
         tm.save(function (err) {
             var cidx = 0;
@@ -32,6 +32,10 @@ module.exports = {
             function (err) {
                 tm.getChildren(TMC, function (err, children, info) {
                     test.equal(children.length, 10, "Not all children found (" + children.length + ")");
+                    children.forEach(function(child) {
+                        test.equals(child.key.indexOf('!'), -1);
+                        test.equals(child.key.indexOf('_'), -1);
+                    });
                     children[0].delete(function (err) {
                         tm.getChildren(TMC, function (err, children, info) {
                             test.equal(info.total, 9);
@@ -42,10 +46,34 @@ module.exports = {
             });
         });
     },
+    'Get Children By Index': function (test) {
+        var TM = new dulcimer.Model({idx: {}}, {name: 'TMI'});
+        var TMC = new dulcimer.Model({cidx: {type: 'integer', index: true}}, {name: 'RCI'});
+        var tm = TM.create({idx: 1});
+        tm.save(function (err) {
+            var cidx = 0;
+            async.whilst(function () {
+                cidx++;
+                return cidx <= 10;
+            },
+            function (acb) {
+                var tmc = tm.createChild(TMC, {cidx: cidx % 2});
+                tmc.save(function (err) {
+                    acb(err);
+                });
+            },
+            function (err) {
+                tm.getChildrenByIndex(TMC, 'cidx', 1, function (err, children, info) {
+                    test.equal(children.length, 5, "Not all children found (" + children.length + ")");
+                    test.done();
+                });
+            });
+        });
+    },
     'Custom keyname': function (test) {
-        var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'TM'});
-        var tm = TM.create({idx: 'crap', keyname: 'custom'});
-        test.equal(tm.key, 'TM!custom');
+        var TM = new dulcimer.Model({idx: {}}, {name: 'TM'});
+        var tm = TM.create({idx: 'crap', key: 'custom'});
+        test.equal(tm.key, 'custom');
         test.done();
 
     },
@@ -68,7 +96,7 @@ module.exports = {
                     test.ifError(err);
                     TM.getByIndex('idx', 'ham', function (err, tms) {
                         test.ok(Array.isArray(tms) && tms.length === 0);
-                        TM.getByIndex('idx', 'salami', function (err, tms) {
+                        TM.getByIndex('idx', 'salami', function (err, tms, total) {
                             test.equals(tms.length, 1);
                             test.done();
                         });
@@ -79,11 +107,11 @@ module.exports = {
     },
     'Delete key': function (test) {
         var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'TM'});
-        var tm = TM.create({idx: 'crap', keyname: 'custom', index: true});
-        test.equal(tm.key, 'TM!custom');
+        var tm = TM.create({idx: 'crap', key: 'custom', index: true});
+        test.equal(tm.key, 'custom');
         tm.save(function (err) {
-            test.ifError(err);
-            TM.delete('TM!custom', function (err) {
+            test.ifError(err, "error");
+            TM.delete('custom', function (err) {
                 test.ifError(err);
                 test.done();
             });
@@ -186,9 +214,7 @@ module.exports = {
             function (err) {
                 TM.all({limit: 10, offset: 10}, function (err, tms, info) {
                     test.equals(info.total, 100);
-                    test.equals(tms[0].idx, 11);
                     test.equals(tms.length, 10);
-                    test.equals(tms[9].idx, 20);
                     test.done();
                 });
             }
@@ -239,7 +265,7 @@ module.exports = {
         tm.save(function (err) {
             var tmc = tm.createChild(TMC, {cidx: 2});
             tmc.save(function (err) {
-                TMC.get(tmc.key, function (err, result) {
+                tm.getChild(TMC, tmc.key, function (err, result) {
                     test.equals(result.cidx, 2);
                     test.done();
                 });
@@ -312,6 +338,10 @@ module.exports = {
             },
             function (err) {
                 TZ.allSortByIndex('idx', function (err, nums) {
+                    nums.forEach(function(num) {
+                        test.equals(num.key.indexOf('!'), -1);
+                        test.equals(num.key.indexOf('_'), -1);
+                    });
                     test.ifError(err);
                     test.equals(nums.length, 7);
                     test.equals(nums[0].idx, 1);
@@ -379,30 +409,6 @@ module.exports = {
             });
         });
     },
-    "Bucket function": function (test) {
-        var Thing = new dulcimer.Model({
-                testfield: {}
-            },
-            {
-                dbdir: __dirname,
-                name: 'thing'
-            });
-        var BucketThing = Thing.bucket('ham');
-
-        var x = BucketThing.create({testfield: 'beer'});
-        x.save(function (err) {
-            BucketThing.load(x.key, function (err, thing) {
-                test.ok(BucketThing.options.db.location.indexOf("ham.db", BucketThing.options.db.location.length - "ham.db".length) !== -1);
-                test.ok(Thing.options.db.location.indexOf("defaultbucket.db", Thing.options.db.location.length - "defaultbucket.db".length) !== -1);
-                test.equals(thing.testfield, 'beer');
-                Thing.load(x.key, {bucket: 'ham'}, function (err, thing2) {
-                    test.equals(thing2.testfield, 'beer');
-                    test.ok(Thing.options.db.location.indexOf("defaultbucket.db", Thing.options.db.location.length - "defaultbucket.db".length) !== -1);
-                    test.done();
-                });
-            });
-        });
-    },
     "Submodel test": function (test) {
         var SM = new dulcimer.Model({name: {}}, {db: db, name: 'submodel'});
         var PM = new dulcimer.Model({name: {}, thing: {foreignKey: SM}}, {db: db, name: 'parentmodel'});
@@ -419,8 +425,8 @@ module.exports = {
         });
     },
     "Collection Test": function (test) {
-        var SM = new dulcimer.Model({name: {}}, {dbdir: __dirname, name: 'submodelcol'});
-        var PM = new dulcimer.Model({name: {}, stuff: {foreignCollection: SM}}, {dbdir: __dirname, name: 'parentmodelcol'});
+        var SM = new dulcimer.Model({name: {}}, {db: db, name: 'submodelcol'});
+        var PM = new dulcimer.Model({name: {}, stuff: {foreignCollection: SM}}, {db: db, name: 'parentmodelcol'});
         var sm = SM.create({bucket: 'hi', name: 'derp'});
         sm.save({bucket: 'hi'}, function (err) {
             var  sm2 = SM.create({name: 'lerp'});
@@ -481,7 +487,7 @@ module.exports = {
         var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'keytype', keyType: 'uuid'});
         var tm = TM.create({idx: 1});
         tm.save(function (err) {
-            test.ok(uuid.isUUID(tm.key.split('!')[1]));
+            test.ok(uuid.isUUID(tm.key));
             test.done();
         });
     },
@@ -520,7 +526,7 @@ module.exports = {
                         } else {
                             return false;
                         }
-                    }}, function (err, tms) {
+                    }, sortBy: 'date'}, function (err, tms) {
                         test.equals(tms[0].date, '2014-02-12');
                         test.equals(tms[1].date, '2014-02-14');
                         test.equals(tms[2].date, '2014-02-16');
@@ -562,6 +568,7 @@ module.exports = {
             });
         });
     },
+    /*
     "Wipe test": function (test) {
         var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'wipe'});
         var cidx = 0;
@@ -581,8 +588,10 @@ module.exports = {
             });
         });
     },
+    */
+    
     "Delete All": function (test) {
-        dbstreams.deleteKeysWithPrefix({db: db, name: ""}, function (err) {
+        dbstreams.deleteKeysWithPrefix({db: db, prefix: "", bucket: ''}, function (err) {
             test.done();
         });
     },

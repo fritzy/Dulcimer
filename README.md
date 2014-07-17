@@ -3,7 +3,9 @@
 Dulcimer is an ORM for an embedded keystore in your Node.js app.
 The aim is to provide a consistent way of working with keystores that enables enjoyable development.
 
-Because when all you have is a hammer, everything looks like a dulcimer.
+Riak can be a pain to run on your dev machine. Why not develop against level and deploy against Riak without sacrificing features or the speed of native indexing?
+
+Because when all you have is a hammer, everything looks like a Dulcimer.
 
 Features Include:
 
@@ -24,7 +26,7 @@ Features Include:
 
 The models in this ORM use [VeryModel](https://github.com/fritzy/verymodel). Dulcimer models extend the definitions and methods.
 
-:point\_up: Currently Dulcimer supports LevelUp based backends. Work for Riak support is nearly finished using [levelup-riak](https://github.com/fritzy/levelup-riak) with more to come.
+We currently support Riak and Levelup backends. Redis coming soon.
 
 :ledger: [Licensed MIT](https://github.com/fritzy/Dulcimer/blob/master/LICENSE)
 
@@ -33,7 +35,10 @@ The models in this ORM use [VeryModel](https://github.com/fritzy/verymodel). Dul
 ```js
 var dulcimer = require('dulcimer');
 var level = require('level');
-var db = level('./test.db', {valueEncoding: 'json'});
+
+dulcimer.connect('./test.db'); //for level
+//dulcimer.connect({type: 'riak', host: 'localhost', port: 8087, bucket: 'somebucket'}); //for riak
+//dulcimer.connect({type: 'level', path: './test.db'}); //alt for level
 
 var PersonFactory = new dulcimer.Model({
     firstName: {},
@@ -56,9 +61,27 @@ nathan.save(function (err) {
 });
 ```
 
+## Coming Soon
+
+* Redis Support
+* Riak Sibling Resolution
+* Import/Export/Transform
+* Write Streams
+* IndexDB in Browsers
+* Patterns Documentation
+* Query and sort against multiple indexes at once
+* Rebuilding Indexes
+* More advanced foreign keys / collections
+
 ## Index
 
 * [Installing](#installing)
+* [Connecting to the Database](#connecting)
+    * [Globally Connect To Level](#conn-level)
+    * [Globally Connect To Riak](#conn-riak)
+    * [Connect Based on on Configuration](#conn-from-config)
+    * [Connecting per Model](#conn-per-model)
+    * [Override Connection per Command](#conn-per-comm)
 * [Defining a Model](#defining-a-model-factory)
     * [type](#def-type)
     * [validate](#def-validate)
@@ -76,7 +99,6 @@ nathan.save(function (err) {
 * [Model Options](#model-options)
     * [name](#mo-name)
     * [db](#mo-db)
-    * [dbdir](#mo-dbdir)
     * [bucket](#mo-bucket)
     * [onSave](#mo-onSave)
     * [onDelete](#mo-onDelete)
@@ -115,6 +137,7 @@ nathan.save(function (err) {
     * [save](#save)
     * [delete](#delete)
     * [createChild](#createChild)
+    * [getChild](#getChild)
     * [getChildren](#getChildren)
     * [getChildrenByIndex](#getChildrenByIndex)
     * [findChildByIndex](#findChildByIndex)
@@ -126,7 +149,100 @@ nathan.save(function (err) {
     * [loadData](#loadData)
 
 ## Installing
+
 `npm install dulcimer`
+
+<a name="connecting"></a>
+### Connecting to a Database
+
+<a name="conn-level"></a>
+#### Connecting to Level for All Models
+
+Shorthand, just call connect with a string path.
+
+```javascript
+var dulcimer = require('dulcimer');
+
+dulcimer.connect('/some/file/path/to/level');
+```
+
+Or pass a more detailed object, maybe from your config file, to make it easier to switch to Riak with just a configuration change.
+
+```javascript
+var dulcimer = require('dulcimer');
+
+dulcimer.connect({
+    type: 'level',
+    path: '/some/file/path/to/level',
+    bucket: 'defaultbucket'
+});
+```
+
+<a name="conn-riak"></a>
+#### Connecting to Riak for All Models
+```
+var dulcimer = require('dulcimer');
+
+dulcimer.connect({
+    type: 'riak',
+    host: 'localhost',
+    port: 8087, //riak protocol buffer port
+    bucket: 'somebucket', //default bucket
+});
+```
+
+<a name="conn-from-config"></a>
+#### Connecting Based on Config
+
+```
+var duclimer = require('dulcimer');
+var config = require('./config.json');
+
+dulcimer.connect(config.database);
+```
+
+<a name="conn-per-model"></a>
+#### Connecting Per Model
+
+The same connect method also exists on Model Factories, which overrides your global connection.
+
+```
+var dulcimer = require('dulcimer');
+
+var Person = new dulcimer.Model({
+    first_name: {type: 'string'},
+    last_name: {type: 'string'}
+});
+
+Person.connect({
+    type: 'level',
+    path: '/some/level/path'
+});
+
+var nathan = Person.create({
+    first_name: 'Nathan',
+    last_name: 'Fritz'
+});
+
+nathan.save(function (err) {
+    console.log("Saved %j to %s", nathan.toJSON(), nathan.key);
+});
+```
+
+<a name="conn-per-comm"></a>
+#### Override Connection Per Command
+
+The connect method returns a levelup-style object with custom extensions to use native-to-db indexes, counters, etc.
+
+You can generate these manually using [level-dulcimer](https://github.com/fritzy/level-dulcimer) and [riak-dulcimer](https://github.com/fritzy/riak-dulcimer) (and soon redis-dulcimer).
+
+```
+var LevelDulcimer = require('level-dulcimer');
+
+var db = LevelDulcimer('/some/level/path');
+```
+
+You can then use this database for the [db option](#op-db) in relevant commands.
 
 ## Defining a Model Factory
 Model Factories define the platonic model, and can create model instances.
@@ -306,7 +422,7 @@ Example:
 
 ```js
 new dulcimer.Model({
-    comment: {'string'},
+    comment: {type: 'string'},
     author: {foreignKey: 'user'},
 });
 ```
@@ -325,7 +441,7 @@ Example:
 
 ```js
 new dulcimer.Model({
-    comment: {'string'},
+    comment: {type: 'string'},
     author: {foreignKey: 'user'},
     starredBy: {foreignCollection: 'user'}
 });
@@ -420,7 +536,7 @@ Model options are the second argument of the `VeryLevelModel` constructor.
 Requirements:
 
 * Models must have a name option.
-* Models must have a db or a dbdir.
+* Models must have a db.
 * Models may have a bucket. You may also define buckets elsewhere if dynamic.
 
 __Note__: Multiple models can and should use the same bucket.
@@ -433,7 +549,6 @@ Index:
 
 * [name](#mo-name)
 * [db](#mo-db)
-* [dbdir](#mo-dbdir)
 * [bucket](#mo-bucket)
 * [onSave](#mo-onSave)
 * [onDelete](#mo-onDelete)
@@ -470,16 +585,6 @@ __db__
 
 The db field should refer to a [LevelUp](https://github.com/rvagg/node-levelup) or compatible library connection.
 The `valueEncoding` option must be 'json'.
-`npm install --save level` will download levelup and the default backend, [leveldown](https://github.com/rvagg/node-leveldown).
-
-This field or [dbdir](#mo-dbdir) is required.
-
----
-
-<a name='mo-dbdir'></a>
-__dbdir__
-
-This field should be a full directory path in which to store the databases if you're using buckets.
 
 ---
 
@@ -622,14 +727,14 @@ Callbacks are always required on functions that include them, and lead with an e
 <a name='op-db'></a>
 __db__
 
-This option overrides the current database defined with mf.options.db or mf.options.dbdir + mf.options.bucket for the current call.
+This option overrides the current database defined with [options.db](#mo-db) for the current call.
 
 ----
 
 <a name='op-bucket'></a>
 __bucket__
 
-This overrides the current database defined with mf.options.dbdir + mfoptions.bucket.
+This overrides the current bucket.
 
 ----
 
@@ -1124,6 +1229,7 @@ function Increment(key, amount, cb) {
 * [save](#save)
 * [delete](#delete)
 * [createChild](#createChild)
+* [getChild](#getChild)
 * [getChildren](#getChildren)
 * [getChildrenByIndex](#getChildrenByIndex)
 * [findChildByIndex](#findChildByIndex)
@@ -1243,6 +1349,31 @@ comment.save(function (err) {
 :point\_up: Deleting the parent object will delete the children.
 
 ----
+
+<a name="getChild"></a>
+__getChild(ModelFactory, key, opts, callback)__
+
+Just like the [get](#get) command, but called from a parent model instance for loading a child.
+
+Arguments:
+
+* key
+* options
+* callback
+
+Callback Arguments:
+
+1. __err__
+2. __model_instance__
+
+Options:
+
+* [db](#op-db)
+* [bucket](#op-bucket)
+* [depth](#op-depth)
+
+---
+
 
 <a name="getChildren"></a>
 __getChildren(ModelFactory, options, callback)__

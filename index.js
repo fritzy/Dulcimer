@@ -1,16 +1,20 @@
 var verymodel  = require('verymodel');
 var Padlock    = require('padlock').Padlock;
-var keylib     = require('./lib/keys');
 var underscore = require('underscore');
-var getDBPath  = require('./lib/dbpool');
 var indexes    = require('./lib/indexes');
 var importexport = require ('./lib/importexport');
 var base       = require('./lib/base');
 var children   = require('./lib/children');
 var foreign    = require('./lib/foreign');
 var uuid       = require('uuid-v4');
+var LevelDulcimer = require('level-dulcimer');
+var RiakDulcimer = require('riak-dulcimer');
+var util = require('util');
 
 var model_cache = {};
+
+var default_db = null;
+var default_bucket = 'default';
 
 function makeModelLevely(mf) {
     mf.options.savelock = new Padlock();
@@ -19,31 +23,29 @@ function makeModelLevely(mf) {
         mf.options.savelock.runwithlock(callback, [mf.options.savelock.release.bind(mf.options.savelock)]);
     };
 
-    mf.getBucketDB = function (bucket) {
-        if (mf.options.dbdir.substr(-1) !== '/') {
-            mf.options.dbdir += '/';
+    mf.connect = function (opts) {
+        if (typeof opts === 'string') {
+            opts = {path: opts, type: 'level'};
         }
-        return getDBPath(mf.options.dbdir + bucket + '.db');
+        if (typeof opts.type === 'undefined' || opts.type === 'level') {
+            mf.options.db = LevelDulcimer(opts.path);
+        } else if (opts.type === 'riak') {
+            mf.options.db = RiakDulcimer(util.format("riak://%s:%d/%s", opts.host, opts.port, opts.bucket || default_bucket || 'default'));
+        } else {
+            throw Error("Invalid DB Specification");
+        }
+        return mf.options.db;
     };
 
-    if (mf.options.dbdir) {
-        mf.options.db = mf.getBucketDB(mf.options.bucket || 'defaultbucket');
-    }
-
-    //for historical reasons, support prefix and name
-    if (!mf.options.name) {
-        mf.options.name = mf.options.prefix;
-    }
-
     if (typeof mf.options.name !== 'string') {
-        throw new Error("Model factories must include a prefix option.");
+        throw new Error("Model factories must include a name option.");
     }
 
     if (!mf.options.hasOwnProperty('foreignDepth')) {
         mf.options.foreignDepth = 5;
     }
 
-    if (mf.options.keyType === 'uuid') {
+    if ((mf.options.keyType === 'uuid' || typeof mf.options.keyType === 'undefined') && typeof mf.options.keyGenerator === 'undefined') {
         mf.options.keyGenerator = function (cb) {
             cb(false, uuid());
         };
@@ -51,24 +53,7 @@ function makeModelLevely(mf) {
 
     mf.addDefinition({
         key: {
-            derive: function () {
-                var value;
-                if (this.__verymeta.data.key) return this.__verymeta.data.key;
-                if (this.__verymeta.parent) {
-                    value = keylib.joinChild(mf, keylib.joinSep(mf, ('__child__', this.__verymeta.parent.key)), this.__verymeta.name, undefined);
-                } else {
-                    value = this.__verymeta.name + (this.__verymeta.sep || '!');
-                }
-                if (!this.keyname) {
-                    return '';
-                }
-                value += this.keyname;
-                return value;
-            },
-            private: !mf.options.includeKey,
-        },
-        keyname: {
-            private: !mf.options.includeKey,
+            private: true,
         },
         vclock: {
             private: true,
@@ -86,22 +71,21 @@ function makeModelLevely(mf) {
         } else {
             opts.cb = callback;
         }
-        if (opts.bucket && mf.options.dbdir) {
-            opts.db = mf.getBucketDB(opts.bucket);
-        } else if (!opts.db) {
+        if (!opts.db && !mf.options.db && default_db !== null && mf.options.useGlobalDB !== false) {
+            mf.options.db = default_db;
+            opts.db = default_db;
+        }
+        if (!opts.db) {
             opts.db = mf.options.db;
         }
-        if (opts.db.isRiak && !opts.bucket) {
-            opts.bucket = mf.options.bucket || 'default';
+        if (!opts.bucket) {
+            opts.bucket = mf.options.bucket || default_bucket;
         }
         if (typeof opts.cb !== 'function') {
             throw Error('The last argument in ' + name + 'must be a function');
         }
         if (!opts.db) {
             throw new Error("Model factories must include a db option of a levelup instance with valueEncoding of json.");
-        }
-        if (opts.db.isClosed() && !opts.bucket.isRiak) {
-            mf.options.db = opts.db = mf.getBucketDB(mf.options.bucket || 'defaultbucket');
         }
         if (typeof opts.depth === 'undefined') {
             opts.depth = mf.options.foreignDepth;
@@ -116,15 +100,8 @@ function makeModelLevely(mf) {
     foreign(mf);
     importexport(mf);
     
-    mf.bucket = function (bucket) {
-        var opts = underscore.clone(mf.options);
-        opts.bucket = bucket;
-        return new VeryLevelModel(mf.definition, opts);
-    };
-
     return mf;
 }
-
 
 function VeryLevelModel() {
     verymodel.VeryModel.apply(this, arguments);
@@ -135,4 +112,21 @@ VeryLevelModel.prototype = Object.create(verymodel.VeryModel.prototype);
 
 module.exports = {
     Model: VeryLevelModel,
+    
+    connect: function (opts) {
+        if (typeof opts === 'string') {
+            opts = {path: opts, type: 'level'};
+        }
+        if (typeof opts.type === 'undefined' || opts.type === 'level') {
+            default_db = LevelDulcimer(opts.path);
+        } else if (opts.type === 'riak') {
+            default_db = RiakDulcimer(util.format("riak://%s:%d/%s", opts.host, opts.port, opts.bucket || 'default'));
+        } else {
+            throw Error("Invalid DB Specification");
+        }
+        if (opts.bucket) {
+            default_bucket = opts.bucket;
+        }
+        return default_db;
+    },
 };

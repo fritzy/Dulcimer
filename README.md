@@ -34,7 +34,6 @@ We currently support Riak and Levelup backends. Redis coming soon.
 
 ```js
 var dulcimer = require('dulcimer');
-var level = require('level');
 
 dulcimer.connect('./test.db'); //for level
 //dulcimer.connect({type: 'riak', host: 'localhost', port: 8087, bucket: 'somebucket'}); //for riak
@@ -46,7 +45,7 @@ var PersonFactory = new dulcimer.Model({
     fullName: {derive: function () {
         return this.firstName + ' ' + this.lastName;
     }},
-}, {db: db, name: 'person'});
+}, {name: 'person'});
 
 var nathan = PersonFactory.create({
     firstName: 'Nathan',

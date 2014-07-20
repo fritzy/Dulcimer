@@ -405,6 +405,7 @@ new dulcimer.Model({
     }
 });
 ```
+:heavy\_exclamation\_mark: Warning! DO NOT REFERENCE THE DERIVE FIELD WITHIN ITS DERIVE FUNCTION! You will cause an infinite recursion. This is bad and will crash your program.
 
 ----
 

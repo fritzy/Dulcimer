@@ -541,6 +541,18 @@ module.exports = {
             });
         });
     },
+    "Save should work with undefined index": function (test) {
+        var TM = new dulcimer.Model({count: {}, something: {index: true}}, {name: 'savewithoutindex'});
+        var tm = TM.create({count: 1});
+        tm.key = 'derp';
+        tm.save(function (err) {
+            TM.get(tm.key, function (err, tm2) {
+                console.log(tm2.toJSON());
+                test.equals(tm2.count, 1);
+                test.done();
+            });
+        });
+    },
     "User locking": function (test) {
         var TM = new dulcimer.Model({count: {}}, {db: db, name: 'userlock'});
         var increment = function (model, amount, cb) {

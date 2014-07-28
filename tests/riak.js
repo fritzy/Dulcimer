@@ -12,6 +12,7 @@ process.on('uncaughtException', function (err) {
     process.exit();
 });
 console.log("Testing riak");
+dulcimer.connect({type: 'riak', port: 8087, host: 'localhost', bucket: 'default'});
 
 module.exports = {
     'Create multiple children': function (test) {
@@ -558,6 +559,17 @@ module.exports = {
                 }
             ],
             function (err) {
+                test.done();
+            });
+        });
+    },
+    "Save should work with undefined index": function (test) {
+        var TM = new dulcimer.Model({count: {}, something: {index: true}}, {name: 'savewithoutindex'});
+        var tm = TM.create({count: 1});
+        tm.key = 'derp';
+        tm.save(function (err) {
+            TM.get(tm.key, function (err, tm2) {
+                test.equals(tm2.count, 1);
                 test.done();
             });
         });

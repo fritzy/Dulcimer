@@ -547,7 +547,6 @@ module.exports = {
         tm.key = 'derp';
         tm.save(function (err) {
             TM.get(tm.key, function (err, tm2) {
-                console.log(tm2.toJSON());
                 test.equals(tm2.count, 1);
                 test.done();
             });
@@ -577,6 +576,74 @@ module.exports = {
                     test.equals(48, tm.count);
                     test.done();
                 });
+            });
+        });
+    },
+    "Normal paging": function (test) {
+        var Main = new dulcimer.Model({idx: {type: 'integer', index: true}}, {name: 'normalpage'});
+        var idx = 0;
+        async.whilst(function () {
+            idx += 1;
+            return idx <= 100;
+        },
+        function (acb) {
+            var m = Main.create({idx: idx});
+            m.save(acb);
+        },
+        function (err) {
+            var page = {count: -1};
+            var loops = 0;
+            async.whilst(function () {
+                return page.count !== 0;
+            },
+            function (acb) {
+                Main.all({limit: 10, continuation: page.continuation}, function (err, mains, pout) {
+                    test.equals(pout.total, 100);
+                    loops += 1;
+                    page = pout;
+                    if (pout.count === 0) {
+                    }
+                    acb();
+                });
+            },
+            function (err) {
+                test.equals(loops, 11);
+                test.done();
+            });
+        });
+    },
+    "Sorted paging": function (test) {
+        var Main = new dulcimer.Model({idx: {type: 'integer', index: true}}, {name: 'sortedpage'});
+        var idx = 0;
+        async.whilst(function () {
+            idx += 1;
+            return idx <= 100;
+        },
+        function (acb) {
+            var m = Main.create({idx: idx});
+            m.save(acb);
+        },
+        function (err) {
+            var page = {count: -1};
+            var loops = 0;
+            async.whilst(function () {
+                return page.count !== 0;
+            },
+            function (acb) {
+                Main.all({limit: 10, continuation: page.continuation, sortBy: 'idx'}, function (err, mains, pout) {
+                    test.equals(pout.total, 100);
+                    loops += 1;
+                    page = pout;
+                    if (pout.count === 0) {
+                        test.ok(Array.isArray(mains));
+                        test.equals(mains.length, 0);
+                    }
+                    acb();
+                });
+            },
+            function (err) {
+                test.equals(loops, 11);
+                test.done();
             });
         });
     },

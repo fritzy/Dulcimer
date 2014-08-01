@@ -111,6 +111,7 @@ nathan.save(function (err) {
     * [bucket](#op-bucket)
     * [offset](#op-offset)
     * [limit](#op-limit)
+    * [continuation](#op-continuation)
     * [sortBy](#op-sortBy)
     * [indexValue](#op-indexValue)
     * [indexRange](#op-indexRange)
@@ -714,6 +715,7 @@ Callbacks are always required on functions that include them, and lead with an e
 * [bucket](#op-bucket)
 * [offset](#op-offset)
 * [limit](#op-limit)
+* [continuation](#op-continuation)
 * [sortBy](#op-sortBy)
 * [indexValue](#op-indexValue)
 * [indexRange](#op-indexRange)
@@ -743,12 +745,22 @@ __offset__
 
 This skips `offset` number of entries in a read call.
 
+:heavy\_exclamation\_mark: This is depricated (and potentially very resource intensive). Use [continuation](#op-continuation) tokens instead.
+
 ----
 
 <a name='op-limit'></a>
 __limit__
 
 This limits the number of results in a read call.
+
+----
+
+<a name='op-continuation'></a>
+__continuation__
+
+This is the token given in the "page.token" information from a [all](#all) when [limit](#op-limit) is used.
+Use this to page through the next set of limited results with the same query.
 
 ----
 
@@ -932,7 +944,7 @@ Callback Arguments:
 
 1. __err__: If err is set, there has been an error getting result.
 2. __models__: An array of model instances unless the [returnStream option](#op-returnStream) is true, at which point it is an [object stream](http://nodejs.org/api/stream.html#stream_object_mode) of resulting model instances.
-3. __pagination__: An object containing specified [limit](#op-limit), [offset](#op-offset), an actual `count` and potential `total` if no offset/limit had been assigned.
+3. __pagination__: An object containing specified [limit](#op-limit), [offset](#op-offset), [continuation](#op-continuation), an actual `count` and potential `total` if no offset/limit had been assigned.
 
 Options:
 
@@ -1055,7 +1067,7 @@ Callback Arguments:
 
 1. __err__: Set only if there was an error.
 2. __models__: An array of model instances unless the [returnStream option](#op-returnStream) is true, at which point it is an [object stream](http://nodejs.org/api/stream.html#stream_object_mode) of resulting model instances.
-3. __pagination__: An object containing specified [limit](#op-limit), [offset](#op-offset), an actual `count` and potential `total` if no offset/limit had been assigned.
+3. __pagination__: An object containing specified [limit](#op-limit), [offset](#op-offset), [continuation](#op-continuation), an actual `count` and potential `total` if no offset/limit had been assigned.
 
 Options:
 
@@ -1390,7 +1402,7 @@ Callback Arguments:
 
 1. __err__: If err is set, there has been an error getting result.
 2. __models__: An array of model instances unless the [returnStream option](#op-returnStream) is true, at which point it is an [object stream](http://nodejs.org/api/stream.html#stream_object_mode) of resulting model instances.
-3. __pagination__: An object containing specified [limit](#op-limit), [offset](#op-offset), an actual `count` and potential `total` if no offset/limit had been assigned.
+3. __pagination__: An object containing specified [limit](#op-limit), [offset](#op-offset), [continuation](#op-continuation), an actual `count` and potential `total` if no offset/limit had been assigned.
 
 Options:
 
@@ -1442,7 +1454,7 @@ Callback Arguments:
 
 1. __err__: If err is set, there has been an error getting result.
 2. __models__: An array of model instances unless the [returnStream option](#op-returnStream) is true, at which point it is an [object stream](http://nodejs.org/api/stream.html#stream_object_mode) of resulting model instances.
-3. __pagination__: An object containing specified [limit](#op-limit), [offset](#op-offset), an actual `count` and potential `total` if no offset/limit had been assigned.
+3. __pagination__: An object containing specified [limit](#op-limit), [offset](#op-offset), [continuation](#op-continuation), an actual `count` and potential `total` if no offset/limit had been assigned.
 
 Options:
 

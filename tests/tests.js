@@ -647,6 +647,22 @@ module.exports = {
             });
         });
     },
+    "Key from index and delete": function (test) {
+        var MF = new dulcimer.Model({
+            identifier: {index: true, type: 'string'},
+        }, {name: 'keyfromindextodelete'});
+        var mf = MF.create({identifier: "doowop"});
+        mf.save(function (err) {
+            MF.findByIndex('identifier', "doowop", function (err, mf2) {
+                MF.delete(mf2.key, function (err) {
+                    MF.findByIndex('identifier', 'doowop', function (err, mf3) {
+                        test.equals(typeof mf3, 'undefined');
+                        test.done();
+                    });
+                });
+            });
+        });
+    },
     /*
     "Wipe test": function (test) {
         var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'wipe'});

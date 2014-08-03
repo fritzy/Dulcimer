@@ -13,6 +13,13 @@ var util = require('util');
 
 var model_cache = {};
 
+function getModel(name) {
+    if (typeof name === 'string') {
+        return model_cache[name];
+    }
+    return name;
+}
+
 var default_db = null;
 var default_bucket = 'default';
 
@@ -41,6 +48,8 @@ function makeModelLevely(mf) {
         throw new Error("Model factories must include a name option.");
     }
 
+    model_cache[mf.options.name] = mf;
+
     if (!mf.options.hasOwnProperty('foreignDepth')) {
         mf.options.foreignDepth = 5;
     }
@@ -65,6 +74,8 @@ function makeModelLevely(mf) {
         },
     });
 
+    mf.getModel = getModel;
+
     mf.handleOpts = function (name, opts, callback) {
         if (typeof callback === 'undefined') {
             opts = {cb: opts};
@@ -82,7 +93,7 @@ function makeModelLevely(mf) {
             opts.bucket = mf.options.bucket || default_bucket;
         }
         if (typeof opts.cb !== 'function') {
-            throw Error('The last argument in ' + name + 'must be a function');
+            throw Error('The last argument in ' + name + ' must be a function');
         }
         if (!opts.db) {
             throw new Error("Model factories must include a db option of a levelup instance with valueEncoding of json.");
@@ -129,4 +140,5 @@ module.exports = {
         }
         return default_db;
     },
+    getModel: getModel,
 };

@@ -647,6 +647,77 @@ module.exports = {
             });
         });
     },
+    "Key from index and delete": function (test) {
+        var MF = new dulcimer.Model({
+            identifier: {index: true, type: 'string'},
+        }, {name: 'keyfromindextodelete'});
+        var mf = MF.create({identifier: "doowop"});
+        mf.save(function (err) {
+            MF.findByIndex('identifier', "doowop", function (err, mf2) {
+                MF.delete(mf2.key, function (err) {
+                    MF.findByIndex('identifier', 'doowop', function (err, mf3) {
+                        test.equals(typeof mf3, 'undefined');
+                        test.done();
+                    });
+                });
+            });
+        });
+    },
+    "Get empty index": function (test) {
+        var TM = new dulcimer.Model({hi: {index: true}}, {name: 'getemptyindex'});
+        TM.getByIndex('hi', 'hello', function (err, tms, page) {
+            test.ifError(err);
+            test.ok(Array.isArray(tms));
+            test.equals(tms.length, 0);
+            test.done();
+        });
+    },
+    "Get foreign keys": function (test) {
+        var FTM = new dulcimer.Model({'msg': {}}, {name: 'foreignkeys'});
+        var TM = new dulcimer.Model({
+            name: {},
+            messages: {foreignKeys: FTM},
+        }, {name: 'foreignmaster'});
+        var tm = TM.create({
+            name: 'main',
+        });
+        var ftm1 = FTM.create({msg: 'hello there'});
+        var ftm2 = FTM.create({msg: 'oh hi'});
+
+        function tmSave() {
+            tm.save(ftm1Save);
+        }
+        function ftm1Save(err) {
+            ftm1.save(ftm2Save);
+        }
+        function ftm2Save(err) {
+            ftm2.save(ftm1ToTM);
+        }
+        function ftm1ToTM(err) {
+            tm.addForeign('messages', ftm1.key, ftm2ToTM);
+        }
+        function ftm2ToTM(err) {
+            tm.addForeign('messages', ftm2.key, getFK);
+        }
+        function getFK(err) {
+            tm.getForeign('messages', function (err, ftms, page) {
+                test.ifError(err);
+                test.ok(Array.isArray(ftms));
+                test.equals(ftms.length, 2);
+                getReverse();
+            });
+        }
+        function getReverse() {
+            ftm2.getReverseForeign("foreignmaster", "messages", function (err, tms, page) {
+                test.ifError(err);
+                test.ok(Array.isArray(tms));
+                test.equals(tms.length, 1);
+                test.equals(tms[0].key, tm.key);
+                test.done();
+            });
+        }
+        tmSave();
+    },
     /*
     "Wipe test": function (test) {
         var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'wipe'});

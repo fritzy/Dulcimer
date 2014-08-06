@@ -16,7 +16,6 @@ Features Include:
 * Retrieve index ranges
 * Retrieve with filters
 * Foreign Keys and Foreign Collections
-* Children
 * Pagination
 * Counts
 * Buckets
@@ -70,7 +69,6 @@ nathan.save(function (err) {
 * Patterns Documentation
 * Query and sort against multiple indexes at once
 * Rebuilding Indexes
-* More advanced foreign keys / collections
 
 ## Index
 
@@ -81,6 +79,7 @@ nathan.save(function (err) {
     * [Connect Based on on Configuration](#conn-from-config)
     * [Connecting per Model](#conn-per-model)
     * [Override Connection per Command](#conn-per-comm)
+* [Referring to a Model By String](#getModel)
 * [Defining a Model](#defining-a-model-factory)
     * [type](#def-type)
     * [validate](#def-validate)
@@ -257,6 +256,19 @@ Creating a new model factory involves passing two arguments: an object describin
 ### Model Definitions
 
 Every root property of a model definition is a field name with an object value defining types, restrictions, and processing for a model field. In it's simplest form, a field definition can just be an empty object, and then you can assign anything to that field. If a field isn't mentioned in the defition, it won't be saved or loaded.
+
+<a name="getModel"></a>
+### Referring to Other Models
+
+With foreign keys and other fields, sometimes models can depend on each other, creating peer requirements.
+This can be awkward in Node.js, so you may refer to those models by ModelFactory instance or by name string.
+
+If you need to look up a model by name elsewhere in your code you can use `dulcimer.getModel`.
+
+```javascript
+var dulcimer = require('dulcimer');
+var CheesecakeFactory = dulcimer.getModel('cheesecake');
+```
 
 #### Field Definition Properties
 

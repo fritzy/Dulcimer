@@ -90,6 +90,7 @@ nathan.save(function (err) {
     * [derive](#def-derive)
     * [index](#def-index)
     * [foreignKey](#def-foreignKey)
+    * [foreignKeys](#def-foreignKeys)
     * [foreignCollection](#def-foreignCollection)
     * [required](#def-required)
     * [default](#def-default)
@@ -109,7 +110,7 @@ nathan.save(function (err) {
 * [Options and Callbacks](#options-and-callbacks)
     * [db](#op-db)
     * [bucket](#op-bucket)
-    * [offset](#op-offset)
+    * <del>[offset](#op-offset)</del>
     * [limit](#op-limit)
     * [continuation](#op-continuation)
     * [sortBy](#op-sortBy)
@@ -136,11 +137,15 @@ nathan.save(function (err) {
 * [Model Instance Methods](#model-instance-methods)
     * [save](#save)
     * [delete](#delete)
-    * [createChild](#createChild)
-    * [getChild](#getChild)
-    * [getChildren](#getChildren)
-    * [getChildrenByIndex](#getChildrenByIndex)
-    * [findChildByIndex](#findChildByIndex)
+    * [addForeign](#addForeign)
+    * [removeForeign](#removeForeign)
+    * [getForeign](#getForeign)
+    * [getReverseForeign](#getReverseForeign)
+    * <del>[createChild](#createChild)</del>
+    * <del>[getChild](#getChild)</del>
+    * <del>[getChildren](#getChildren)</del>
+    * <del>[getChildrenByIndex](#getChildrenByIndex)</del>
+    * <del>[findChildByIndex](#findChildByIndex)</del>
     * [toJSON](#toJSON)
     * [toString](#toString)
     * [diff](#diff)
@@ -269,6 +274,7 @@ Most field definition properties that can be functions are called with the model
 * [derive](#def-derive)
 * [index](#def-index)
 * [foreignKey](#def-foreignKey)
+* [foreignKeys](#def-foreignKeys)
 * [foreignCollection](#def-foreignCollection)
 * [required](#def-required)
 * [default](#def-default)
@@ -425,6 +431,33 @@ Example:
 new dulcimer.Model({
     comment: {type: 'string'},
     author: {foreignKey: 'user'},
+});
+```
+
+---
+
+<a name='def-foreignKeys'></a>
+__foreignKeys__
+
+`foreignKeys` should be a Model Factory or a string of the factory name.
+Using foreignKeys will automatically set the [type](#def-type) to `array`.
+Unlike [foreignKey](#def-foreignKey) and [foreignCollection](#def-foreignCollection), the key values are not stored in the object itself. This way you may add millions of foreign relationships with [addForeign](#addForeign) to any given key. This also means that you cannot edit the field to edit the relationships.
+
+By default, this field will be populated by up to `10` foreign model instances. You can change that number with by setting an `autoLoad` key in the definition to another number.
+
+To manipulate and load foreign relationships, use the following methods:
+
+* [addForeign](#addForeign)
+* [removeForeign](#removeForeign)
+* [getForeign](#getForeign)
+* [getReverseForeign](#getReverseForeign)
+
+Example:
+
+```js
+new dulcimer.Model({
+    post: {type: 'string'},
+    contributors: {foreignKeys: 'user', autoLoad: 5},
 });
 ```
 
@@ -713,9 +746,9 @@ Callbacks are always required on functions that include them, and lead with an e
 
 * [db](#op-db)
 * [bucket](#op-bucket)
-* [offset](#op-offset)
-* [limit](#op-limit)
+* <del>[offset](#op-offset)</del>
 * [continuation](#op-continuation)
+* [limit](#op-limit)
 * [sortBy](#op-sortBy)
 * [indexValue](#op-indexValue)
 * [indexRange](#op-indexRange)
@@ -950,7 +983,8 @@ Options:
 
 * [db](#op-db)
 * [bucket](#op-bucket)
-* [offset](#op-offset)
+* <del>[offset](#op-offset)</del>
+* [continuation](#op-continuation)
 * [limit](#op-limit)
 * [sortBy](#op-sortBy)
 * [index](#op-index)
@@ -1073,7 +1107,8 @@ Options:
 
 * [db](#op-db)
 * [bucket](#op-bucket)
-* [offset](#op-offset)
+* <del>[offset](#op-offset)</del>
+* [continuation](#op-continuation)
 * [limit](#op-limit)
 * [reverse](#op-reverse)
 * [filter](#op-filter)
@@ -1148,7 +1183,8 @@ Options:
 
 * [db](#op-db)
 * [bucket](#op-bucket)
-* [offset](#op-offset)
+* <del>[offset](#op-offset)</del>
+* [continuation](#op-continuation)
 * [limit](#op-limit)
 * [reverse](#op-reverse)
 * [filter](#op-filter)
@@ -1240,11 +1276,15 @@ function Increment(key, amount, cb) {
 
 * [save](#save)
 * [delete](#delete)
-* [createChild](#createChild)
-* [getChild](#getChild)
-* [getChildren](#getChildren)
-* [getChildrenByIndex](#getChildrenByIndex)
-* [findChildByIndex](#findChildByIndex)
+* [addForeign](#addForeign)
+* [removeForeign](#removeForeign)
+* [getForeign](#getForeign)
+* [getReverseForeign](#getReverseForeign)
+* <del>[createChild](#createChild)</del>
+* <del>[getChild](#getChild)</del>
+* <del>[getChildren](#getChildren)</del>
+* <del>[getChildrenByIndex](#getChildrenByIndex)</del>
+* <del>[findChildByIndex](#findChildByIndex)</del>
 * [toJSON](#toJSON)
 * [toString](#toString)
 * [diff](#diff)
@@ -1328,6 +1368,172 @@ Example:
 ```javascript
 person.delete({ctx:{userid: someuser}}, function (err) {
     //the model option onDelete was called with the ctx object
+});
+```
+
+---
+
+<a name="addForeign"></a>
+__addForeign(field, other, options, callback)__
+
+Add a relationship to `this` model instance of another model instance or key.
+
+Arguments:
+
+* field: field in this model's definition with foreignKeys
+* other: key or model instance of the model factory referred to as `field`'s foreignKeys
+* options
+* callback
+
+Callback Arguments:
+
+* err
+
+
+Example:
+
+```javascript
+var BlogPostFactory = new dulcimer.Model({
+    title: {type: 'string'},
+    body: {type: 'string'},
+    contributors: {foreignKeys: 'user'}
+}, {name: 'blogpost'})
+
+var User = new dulcimer.Model({
+    //...
+});
+
+//...
+
+var user = User.create({
+    //...
+});
+
+
+var post = Post.create({
+    title: "Some Blog Title",
+    body: "It could happen to you..."
+});
+
+
+user.save(function (err) {
+    post.save(function (err) {
+        post.addForeign('contributors', user, function (err) {
+            //...
+        });
+    });
+});
+``` 
+
+---
+
+<a name="removeForeign"></a>
+__removeForeign(field, other, options, callback)__
+
+Remove a relationship to `this` model instance of another model instance or key.
+
+Arguments:
+
+* field: field in this model's definition with foreignKeys
+* other: key or model instance of the model factory referred to as `field`'s foreignKeys
+* options
+* callback
+
+Callback Arguments:
+
+* err
+
+Example:
+
+```javascript
+BlogPostFactory.get('somekey', function (err, post) {
+    post.removeForeign('contributors', 'someuserkeyOrInstance', function (err) {
+        //...
+    });
+});
+```
+
+---
+
+<a name="getForeign"></a>
+__getForeign(field, options, callback)__
+
+Retrieves the model instances from foreign relationships of the field.
+
+Arguments:
+
+* field: field with foreignKeys
+* options
+* callback `function (err, models, callback)`
+
+Callback Arguments:
+
+1. __err__: If err is set, there has been an error getting result.
+2. __models__: An array of model instances unless the [returnStream option](#op-returnStream) is true, at which point it is an [object stream](http://nodejs.org/api/stream.html#stream_object_mode) of resulting model instances.
+3. __pagination__: An object containing specified [limit](#op-limit), [offset](#op-offset), [continuation](#op-continuation), an actual `count` and potential `total` if no offset/limit had been assigned.
+
+Options:
+
+* [db](#op-db)
+* [bucket](#op-bucket)
+* <del>[offset](#op-offset)</del>
+* [continuation](#op-continuation)
+* [limit](#op-limit)
+* [reverse](#op-reverse)
+* [filter](#op-filter)
+* [depth](#op-depth)
+* [returnStream](#op-returnStream)
+
+Example:
+
+```javascript
+blogPost.getForeign('contributors', {limit: 10}, function (err, users, page) {
+    if (users.length > 0) {
+        console.log(users[0].toJSON());
+    }
+});
+```
+
+----
+
+<a name="getReverseForeign"></a>
+__getReverseForeign(modelfactory, field, options, callback)__
+
+Retrieves the model instances of another modelfactory with a foreignKeys field to `this`'s modelfactory.
+Just like [getForeign](#getForeign) but from the reverse side.
+
+Arguments:
+
+* modelfactory: model from which the foreignKeys field exists
+* field: field in the modelfactory with foreignKeys back to `this` model instance
+* options
+* callback `function (err, models, callback)`
+
+Callback Arguments:
+
+1. __err__: If err is set, there has been an error getting result.
+2. __models__: An array of model instances unless the [returnStream option](#op-returnStream) is true, at which point it is an [object stream](http://nodejs.org/api/stream.html#stream_object_mode) of resulting model instances.
+3. __pagination__: An object containing specified [limit](#op-limit), [offset](#op-offset), [continuation](#op-continuation), an actual `count` and potential `total` if no offset/limit had been assigned.
+
+Options:
+
+* [db](#op-db)
+* [bucket](#op-bucket)
+* <del>[offset](#op-offset)</del>
+* [continuation](#op-continuation)
+* [limit](#op-limit)
+* [reverse](#op-reverse)
+* [filter](#op-filter)
+* [depth](#op-depth)
+* [returnStream](#op-returnStream)
+
+Example:
+
+```javascript
+user.getReverseForeign(BlogPostFactory, 'contributors', {limit: 10}, function (err, posts, page) 
+    posts.forEach(function (post) {
+        console.log(post.title);
+    });
 });
 ```
 
@@ -1460,7 +1666,8 @@ Options:
 
 * [db](#op-db)
 * [bucket](#op-bucket)
-* [offset](#op-offset)
+* <del>[offset](#op-offset)</del>
+* [continuation](#op-continuation)
 * [limit](#op-limit)
 * [reverse](#op-reverse)
 * [filter](#op-filter)
@@ -1613,4 +1820,4 @@ person.loadData({
 
 console.log(person.toJSON());
 // {firstName: 'Nathan', lastName: 'Fritz', favoriteFood: 'burrito', favoriteColor: 'green'}
-```
+et!  All acronyms are already a mystery to me!``

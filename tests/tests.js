@@ -766,6 +766,73 @@ module.exports = {
         }
         tmSave();
     },
+    "Auto load foreign keys": function (test) {
+        var Autoer = new dulcimer.Model({name: {}, others: {foreignKeys: 'autoloaded'}},{name: 'autoloader'});
+        var Autoed = new dulcimer.Model({why: {}}, {name: 'autoloaded'});
+        var ar = Autoer.create({name: 'main'});
+        var ad1 = Autoed.create({why: 'not'});
+        var ad2 = Autoed.create({why: 'for'});
+        var ad3 = Autoed.create({why: 'now'});
+        var ad4 = Autoed.create({why: 'did'});
+        var ad5 = Autoed.create({why: 'has'});
+        function saveAr() {
+            ar.save(saveAd1);
+        }
+        function saveAd1(err) {
+            test.ifError(err);
+            ad1.save(saveAd2);
+        }
+        function saveAd2(err) {
+            test.ifError(err);
+            ad2.save(saveAd3);
+        }
+        function saveAd3(err) {
+            test.ifError(err);
+            ad3.save(saveAd4);
+        }
+        function saveAd4(err) {
+            test.ifError(err);
+            ad4.save(saveAd5);
+        }
+        function saveAd5(err) {
+            test.ifError(err);
+            ad5.save(bindAd1);
+        }
+        function bindAd1(err) {
+            test.ifError(err);
+            ar.addForeign('others', ad1, bindAd2);
+        }
+        function bindAd2(err) {
+            test.ifError(err);
+            ar.addForeign('others', ad2, bindAd3);
+        }
+        function bindAd3(err) {
+            test.ifError(err);
+            ar.addForeign('others', ad3, bindAd4);
+        }
+        function bindAd4(err) {
+            test.ifError(err);
+            ar.addForeign('others', ad4, bindAd5);
+        }
+        function bindAd5(err) {
+            test.ifError(err);
+            ar.addForeign('others', ad5, getAr);
+        }
+        function getAr(err) {
+            test.ifError(err);
+            Autoer.load(ar.key, function (err, ar2) {
+                test.ok(Array.isArray(ar2.others));
+                test.equals(ar2.others.length, 5);
+                var whys = {'not': true, 'for': true, 'now': true, 'did': true, 'has': true};
+                ar2.others.forEach(function (other) {
+                    test.equals(whys[other.why], true);
+                    delete whys[other.why];
+                });
+                test.done();
+            });
+        }
+        saveAr();
+    },
     /*
     "Wipe test": function (test) {
         var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'wipe'});

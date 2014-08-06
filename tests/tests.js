@@ -673,16 +673,23 @@ module.exports = {
         });
     },
     "Get foreign keys": function (test) {
-        var FTM = new dulcimer.Model({'msg': {}}, {name: 'foreignkeys'});
+        var FTM = new dulcimer.Model({
+            'msg': {},
+            'others': {foreignKeys: 'otherside'},
+        }, {name: 'foreignkeys'});
         var TM = new dulcimer.Model({
             name: {},
             messages: {foreignKeys: FTM},
         }, {name: 'foreignmaster'});
+        var OTM = new dulcimer.Model({
+            name: {},
+        }, {name: 'otherside'});
         var tm = TM.create({
             name: 'main',
         });
         var ftm1 = FTM.create({msg: 'hello there'});
         var ftm2 = FTM.create({msg: 'oh hi'});
+        var otm1 = OTM.create({name: 'right'});
 
         function tmSave() {
             tm.save(ftm1Save);
@@ -691,19 +698,26 @@ module.exports = {
             ftm1.save(ftm2Save);
         }
         function ftm2Save(err) {
-            ftm2.save(ftm1ToTM);
+            ftm2.save(otm1Save);
+        }
+        function otm1Save(err) {
+            otm1.save(ftm1ToTM);
         }
         function ftm1ToTM(err) {
             tm.addForeign('messages', ftm1.key, ftm2ToTM);
         }
         function ftm2ToTM(err) {
-            tm.addForeign('messages', ftm2.key, getFK);
+            tm.addForeign('messages', ftm2.key, otm1ToFTM);
+        }
+        function otm1ToFTM(err) {
+            ftm1.addForeign('others', otm1.key, getFK);
         }
         function getFK(err) {
             tm.getForeign('messages', function (err, ftms, page) {
                 test.ifError(err);
                 test.ok(Array.isArray(ftms));
                 test.equals(ftms.length, 2);
+                test.equals(page.total, 2);
                 getReverse();
             });
         }
@@ -713,6 +727,40 @@ module.exports = {
                 test.ok(Array.isArray(tms));
                 test.equals(tms.length, 1);
                 test.equals(tms[0].key, tm.key);
+                test.equals(page.total, 1);
+                getRight1();
+            });
+        }
+        function getRight1(err) {
+            test.ifError(err);
+            otm1.getReverseForeign("foreignkeys", 'others', function (err, ftms, page) {
+                test.ifError(err);
+                test.ok(Array.isArray(ftms));
+                test.equals(ftms.length, 1);
+                test.equals(page.total, 1);
+                deleteMiddle();
+            });
+        }
+        function deleteMiddle() {
+            ftm1.delete(getLeft);
+        }
+        function getLeft(err) {
+            test.ifError(err);
+            tm.getForeign('messages', function (err, ftms, page) {
+                test.ifError(err);
+                test.ok(Array.isArray(ftms));
+                test.equals(ftms.length, 1);
+                test.equals(page.total, 1);
+                getRight2();
+            });
+        }
+        function getRight2(err) {
+            test.ifError(err);
+            otm1.getReverseForeign(FTM, 'others', function (err, ftms, page) {
+                test.ifError(err);
+                test.ok(Array.isArray(ftms));
+                test.equals(ftms.length, 0);
+                test.equals(page.total, 0);
                 test.done();
             });
         }
@@ -738,11 +786,12 @@ module.exports = {
             });
         });
     },
-    */
     
+
     "Delete All": function (test) {
         dbstreams.deleteKeysWithPrefix({db: db, prefix: "", bucket: ''}, function (err) {
             test.done();
         });
     },
+    */
 };

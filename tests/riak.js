@@ -669,6 +669,192 @@ module.exports = {
             });
         });
     },
+    "Key from index and delete": function (test) {
+        var MF = new dulcimer.Model({
+            identifier: {index: true, type: 'string'},
+        }, {name: 'keyfromindextodelete'});
+        var mf = MF.create({identifier: "doowop"});
+        mf.save(function (err) {
+            MF.findByIndex('identifier', "doowop", function (err, mf2) {
+                MF.delete(mf2.key, function (err) {
+                    MF.findByIndex('identifier', 'doowop', function (err, mf3) {
+                        test.equals(typeof mf3, 'undefined');
+                        test.done();
+                    });
+                });
+            });
+        });
+    },
+    "Get empty index": function (test) {
+        var TM = new dulcimer.Model({hi: {index: true}}, {name: 'getemptyindex'});
+        TM.getByIndex('hi', 'hello', function (err, tms, page) {
+            test.ifError(err);
+            test.ok(Array.isArray(tms));
+            test.equals(tms.length, 0);
+            test.done();
+        });
+    },
+    "Get foreign keys": function (test) {
+        var FTM = new dulcimer.Model({
+            'msg': {},
+            'others': {foreignKeys: 'otherside'},
+        }, {name: 'foreignkeys'});
+        var TM = new dulcimer.Model({
+            name: {},
+            messages: {foreignKeys: FTM},
+        }, {name: 'foreignmaster'});
+        var OTM = new dulcimer.Model({
+            name: {},
+        }, {name: 'otherside'});
+        var tm = TM.create({
+            name: 'main',
+        });
+        var ftm1 = FTM.create({msg: 'hello there'});
+        var ftm2 = FTM.create({msg: 'oh hi'});
+        var otm1 = OTM.create({name: 'right'});
+
+        function tmSave() {
+            tm.save(ftm1Save);
+        }
+        function ftm1Save(err) {
+            ftm1.save(ftm2Save);
+        }
+        function ftm2Save(err) {
+            ftm2.save(otm1Save);
+        }
+        function otm1Save(err) {
+            otm1.save(ftm1ToTM);
+        }
+        function ftm1ToTM(err) {
+            tm.addForeign('messages', ftm1.key, ftm2ToTM);
+        }
+        function ftm2ToTM(err) {
+            tm.addForeign('messages', ftm2.key, otm1ToFTM);
+        }
+        function otm1ToFTM(err) {
+            ftm1.addForeign('others', otm1.key, getFK);
+        }
+        function getFK(err) {
+            tm.getForeign('messages', function (err, ftms, page) {
+                test.ifError(err);
+                test.ok(Array.isArray(ftms));
+                test.equals(ftms.length, 2);
+                test.equals(page.total, 2);
+                getReverse();
+            });
+        }
+        function getReverse() {
+            ftm2.getReverseForeign("foreignmaster", "messages", function (err, tms, page) {
+                test.ifError(err);
+                test.ok(Array.isArray(tms));
+                test.equals(tms.length, 1);
+                test.equals(tms[0].key, tm.key);
+                test.equals(page.total, 1);
+                getRight1();
+            });
+        }
+        function getRight1(err) {
+            test.ifError(err);
+            otm1.getReverseForeign("foreignkeys", 'others', function (err, ftms, page) {
+                test.ifError(err);
+                test.ok(Array.isArray(ftms));
+                test.equals(ftms.length, 1);
+                test.equals(page.total, 1);
+                deleteMiddle();
+            });
+        }
+        function deleteMiddle() {
+            ftm1.delete(getLeft);
+        }
+        function getLeft(err) {
+            test.ifError(err);
+            tm.getForeign('messages', function (err, ftms, page) {
+                test.ifError(err);
+                test.ok(Array.isArray(ftms));
+                test.equals(ftms.length, 1);
+                test.equals(page.total, 1);
+                getRight2();
+            });
+        }
+        function getRight2(err) {
+            test.ifError(err);
+            otm1.getReverseForeign(FTM, 'others', function (err, ftms, page) {
+                test.ifError(err);
+                test.ok(Array.isArray(ftms));
+                test.equals(ftms.length, 0);
+                test.equals(page.total, 0);
+                test.done();
+            });
+        }
+        tmSave();
+    },
+    "Auto load foreign keys": function (test) {
+        var Autoer = new dulcimer.Model({name: {}, others: {foreignKeys: 'autoloaded'}},{name: 'autoloader'});
+        var Autoed = new dulcimer.Model({why: {}}, {name: 'autoloaded'});
+        var ar = Autoer.create({name: 'main'});
+        var ad1 = Autoed.create({why: 'not'});
+        var ad2 = Autoed.create({why: 'for'});
+        var ad3 = Autoed.create({why: 'now'});
+        var ad4 = Autoed.create({why: 'did'});
+        var ad5 = Autoed.create({why: 'has'});
+        function saveAr() {
+            ar.save(saveAd1);
+        }
+        function saveAd1(err) {
+            test.ifError(err);
+            ad1.save(saveAd2);
+        }
+        function saveAd2(err) {
+            test.ifError(err);
+            ad2.save(saveAd3);
+        }
+        function saveAd3(err) {
+            test.ifError(err);
+            ad3.save(saveAd4);
+        }
+        function saveAd4(err) {
+            test.ifError(err);
+            ad4.save(saveAd5);
+        }
+        function saveAd5(err) {
+            test.ifError(err);
+            ad5.save(bindAd1);
+        }
+        function bindAd1(err) {
+            test.ifError(err);
+            ar.addForeign('others', ad1, bindAd2);
+        }
+        function bindAd2(err) {
+            test.ifError(err);
+            ar.addForeign('others', ad2, bindAd3);
+        }
+        function bindAd3(err) {
+            test.ifError(err);
+            ar.addForeign('others', ad3, bindAd4);
+        }
+        function bindAd4(err) {
+            test.ifError(err);
+            ar.addForeign('others', ad4, bindAd5);
+        }
+        function bindAd5(err) {
+            test.ifError(err);
+            ar.addForeign('others', ad5, getAr);
+        }
+        function getAr(err) {
+            test.ifError(err);
+            Autoer.load(ar.key, function (err, ar2) {
+                test.ok(Array.isArray(ar2.others));
+                test.equals(ar2.others.length, 5);
+                var whys = {'not': true, 'for': true, 'now': true, 'did': true, 'has': true};
+                ar2.others.forEach(function (other) {
+                    test.equals(whys[other.why], true);
+                    delete whys[other.why];
+                });
+                test.done();
+            });
+        }
+        saveAr();
+    },
     /*
     "Wipe test": function (test) {
         var TM = new dulcimer.Model({idx: {}}, {db: db, name: 'wipe'});

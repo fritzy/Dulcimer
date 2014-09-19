@@ -611,6 +611,53 @@ module.exports = {
             TM.exportJSON(receiver);
         });
     },
+    "Import array": function (test) {
+        var TM = new dulcimer.Model({
+            first: {},
+            last: {},
+            both: {derive: function () {
+                return this.first + ' ' + this.last;
+            }}
+        }, {db: db, name: 'importArrayTest'});
+        TM.importData([
+            {id: '00000001', first: 'John', last: 'Smith'},
+            {id: '00000002', first: 'Bill', last: 'Jones'}
+        ], function (err) {
+            test.ok(!err, err);
+            TM.all({}, function (err, list) {
+                test.ok(!err, err);
+                test.equal(list.length, 2);
+                test.equal(list[0].both, 'John Smith');
+                test.done();
+            });
+        });
+    },
+    "Import stream": function (test) {
+        var TM = new dulcimer.Model({
+            first: {},
+            last: {},
+            both: {derive: function () {
+                return this.first + ' ' + this.last;
+            }}
+        }, {db: db, name: 'importArrayTest'});
+        var data =[
+            {id: '00000001', first: 'John', last: 'Smith'},
+            {id: '00000002', first: 'Bill', last: 'Jones'}
+        ];
+        var readable = new stream.Readable({objectMode: true});
+        readable._read = function () {
+            this.push(data.shift()||null);
+        };
+        TM.importData(readable, function (err) {
+            test.ok(!err, err);
+            TM.all({}, function (err, list) {
+                test.ok(!err, err);
+                test.equal(list.length, 2);
+                test.equal(list[1].both, 'Bill Jones');
+                test.done();
+            });
+        });
+    },
     "Delete All": function (test) {
         dbstreams.deleteKeysWithPrefix({db: db, name: ""}, function (err) {
             test.done();

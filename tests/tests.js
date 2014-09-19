@@ -5,6 +5,7 @@ var async = require('async');
 var verymodel = require('verymodel');
 var dbstreams = require('../lib/streams');
 var uuid = require('uuid-v4');
+var stream = require('stream');
 
 process.on('uncaughtException', function (err) {
     console.trace();
@@ -832,7 +833,7 @@ module.exports = {
             });
         }
         saveAr();
-    }
+    },
     "Export": function (test) {
         var TM = new dulcimer.Model({
             first: {},
@@ -927,6 +928,35 @@ module.exports = {
             TM.wipe(function (err) {
                 test.done();
             });
+        });
+    },
+    "Export": function (test) {
+        var TM = new dulcimer.Model({
+            first: {},
+            last: {},
+            both: function () {
+                return this.first + ' ' + this.last;
+            }
+        }, {db: db, name: 'exportTest'});
+        var receiver = new stream.Transform({objectMode: true});
+        receiver._transform = function (list, x, next) {
+            if (Array.isArray(list)) {
+                var obj = list[0];
+                test.ok('id' in obj);
+                test.ok('first' in obj);
+                test.ok('last' in obj);
+                test.ok(!('both' in obj));
+            }
+            next();
+        };
+        receiver._flush = function (done) {
+            done();
+            test.done();
+        };
+        var tm = TM.create({first: 'John', last: 'Smith'});
+        tm.save(function (err) {
+            test.ok(err == null);
+            TM.exportJSON(receiver);
         });
     },
     "Delete All": function (test) {

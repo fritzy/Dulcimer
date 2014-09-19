@@ -832,6 +832,82 @@ module.exports = {
             });
         }
         saveAr();
+    }
+    "Export": function (test) {
+        var TM = new dulcimer.Model({
+            first: {},
+            last: {},
+            both: function () {
+                return this.first + ' ' + this.last;
+            }
+        }, {db: db, name: 'exportTest'});
+        var receiver = new stream.Transform({objectMode: true});
+        receiver._transform = function (list, x, next) {
+            if (Array.isArray(list)) {
+                var obj = list[0];
+                test.ok('id' in obj);
+                test.ok('first' in obj);
+                test.ok('last' in obj);
+                test.ok(!('both' in obj));
+            }
+            next();
+        };
+        receiver._flush = function (done) {
+            done();
+            test.done();
+        };
+        var tm = TM.create({first: 'John', last: 'Smith'});
+        tm.save(function (err) {
+            test.ok(err == null);
+            TM.exportJSON(receiver);
+        });
+    },
+    "Import array": function (test) {
+        var TM = new dulcimer.Model({
+            first: {},
+            last: {},
+            both: {derive: function () {
+                return this.first + ' ' + this.last;
+            }}
+        }, {db: db, name: 'importArrayTest'});
+        TM.importData([
+            {id: '00000001', first: 'John', last: 'Smith'},
+            {id: '00000002', first: 'Bill', last: 'Jones'}
+        ], function (err) {
+            test.ok(!err, err);
+            TM.all({}, function (err, list) {
+                test.ok(!err, err);
+                test.equal(list.length, 2);
+                test.equal(list[0].both, 'John Smith');
+                test.done();
+            });
+        });
+    },
+    "Import stream": function (test) {
+        var TM = new dulcimer.Model({
+            first: {},
+            last: {},
+            both: {derive: function () {
+                return this.first + ' ' + this.last;
+            }}
+        }, {db: db, name: 'importArrayTest'});
+        var data =[
+            {id: '00000001', first: 'John', last: 'Smith'},
+            {id: '00000002', first: 'Bill', last: 'Jones'}
+        ];
+        var readable = new stream.Readable({objectMode: true});
+        readable._read = function () {
+            this.push(data.shift()||null);
+        };
+        TM.importData(readable, function (err) {
+            test.ok(!err, err);
+            TM.all({}, function (err, list) {
+                test.ok(!err, err);
+                test.equal(list.length, 2);
+                test.equal(list[1].both, 'Bill Jones');
+                test.done();
+            });
+        });
     },
     /*
     "Wipe test": function (test) {
@@ -853,8 +929,6 @@ module.exports = {
             });
         });
     },
-    
-
     "Delete All": function (test) {
         dbstreams.deleteKeysWithPrefix({db: db, prefix: "", bucket: ''}, function (err) {
             test.done();

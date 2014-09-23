@@ -10,6 +10,10 @@ var uuid       = require('uuid-v4');
 var LevelDulcimer = require('level-dulcimer');
 var RiakDulcimer = require('riak-dulcimer');
 var util = require('util');
+var extra_types = require('./lib/types');
+
+verymodel.registerTypes(extra_types);
+
 
 var model_cache = {};
 
@@ -141,4 +145,5 @@ module.exports = {
         return default_db;
     },
     getModel: getModel,
+    registerTypes: verymodel.RegisterTypes,
 };

@@ -290,6 +290,12 @@ module.exports = {
             });
         });
     },
+    "moment type": function (test) {
+        var TM = new dulcimer.Model({field: {type: 'moment'}}, {db: db, name: 'moment_type'});
+        var tm = TM.create({field: new Date(1981, 02, 10)});
+        test.equals(tm.field.format('E'), '2');
+        test.done();
+    },
     "integer indexes": function (test) {
         var TM = new dulcimer.Model({idx: {index_int: true}, thingy: {}}, {db: db, name: 'intidx'});
         var tm = TM.create({idx: 3509835098567, thingy: 'Well hello there!'});

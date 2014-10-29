@@ -21,6 +21,7 @@ Features Include:
 * onSave & onDelete Model Events
 * derived fields
 * field types and validation
+* fixture import/export
 
 The models in this ORM use [VeryModel](https://github.com/fritzy/verymodel). Dulcimer models extend the definitions and methods.
 
@@ -111,6 +112,8 @@ nathan.save(function (err) {
     * [allSortByIndex](#allSortByIndex)
     * [getTotal](#getTotal)
     * [runWithLock](#runWithLock)
+    * [exportJSON](#exportJSON)
+    * [importData](#importData)
 * [Model Instance Methods](#model-instance-methods)
     * [save](#save)
     * [delete](#delete)
@@ -1088,8 +1091,8 @@ You have to read the previous value, and update based on that.
 But what if, when the process goes back to the event loop when you call save, an function runs that changes the value?
 Now that value is lost.
 
-Duclimer keeps an internal lock for writes that `runWithLock` that runWithLock acquires for you to solve problems like this.
-runWithLock queus other locking calls until you `unlock()`
+Dulcimer keeps an internal lock for writes that `runWithLock` that runWithLock acquires for you to solve problems like this.
+runWithLock queues other locking calls until you `unlock()`
 
 :heavy\_exclamation\_mark: Within a locked function, anytime you call [save](#save) or [delete](#delete) use the option `withoutLock` set to `true`. You need to do this because you already have a write lock. This is the **ONLY** time you should do so.
 
@@ -1118,6 +1121,52 @@ function Increment(key, amount, cb) {
 }
 ```
 :heavy\_exclamation\_mark: Make sure that the end of all of your code flows end in an `unlock()` if you're using if statements!
+
+<a name="exportJSON">
+__exportJSON(writeable)__
+
+Sometimes you may need to export your data to a JSON fixture.
+
+Arguments:
+
+* writeable: (optional: default is stdout) the writeable Stream to write serialized data to such as a `fs.createWriteStream` instance
+
+Example:
+
+```javascript
+var fs = require('fs');
+var outFileStream = fs.createWriteStream(__dirname + '/SomeModel.export.json');
+var SomeModelFactory = require('./models/someModelFactory');
+
+SomeModelFactory.exportJSON(outFileStream);
+// writes JSON-serialized data to SomeModel.export.json file
+[
+    {/* first model data */},
+    …
+    {/* last model data */}
+]
+```
+
+<a name="importData">
+__importData(arrayOrStream, callback)__
+
+Sometimes you need to import data from a JSON fixture.
+
+Arguments:
+
+* arrayOrStream: an array of objects or a readable stream of objects where the objects are model data.
+* callback: (optional) called when import is finished
+
+Example:
+
+```javascript
+var fixtureData = require(__dirname + '/SomeModel.export.json');
+var SomeModelFactory = require('./models/someModelFactory');
+
+SomeModelFactory.importData(fixtureData, function ()  {
+    // Stuff to do after import is complete
+});
+```
 
 ## Model Instance Methods
 
@@ -1227,7 +1276,7 @@ They're great for revision logs, comments, etc.
 Example:
 
 ```javascript
-var comment = person.createChild(Comment{
+var comment = person.createChild(Comment, {
     body: "I think that guy is pretty great.",
     author: otherperson,
 });

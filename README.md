@@ -133,6 +133,8 @@ nathan.save(function (err) {
     * [allSortByIndex](#allSortByIndex)
     * [getTotal](#getTotal)
     * [runWithLock](#runWithLock)
+    * [exportJSON](#exportJSON)
+    * [importData](#importData)
 * [Model Instance Methods](#model-instance-methods)
     * [save](#save)
     * [delete](#delete)
@@ -1283,6 +1285,52 @@ function Increment(key, amount, cb) {
 }
 ```
 :heavy\_exclamation\_mark: Make sure that the end of all of your code flows end in an `unlock()` if you're using if statements!
+
+<a name="exportJSON">
+__exportJSON(writeable)__
+
+Sometimes you may need to export your data to a JSON fixture.
+
+Arguments:
+
+* writeable: (optional: default is stdout) the writeable Stream to write serialized data to such as a `fs.createWriteStream` instance
+
+Example:
+
+```javascript
+var fs = require('fs');
+var outFileStream = fs.createWriteStream(__dirname + '/SomeModel.export.json');
+var SomeModelFactory = require('./models/someModelFactory');
+
+SomeModelFactory.exportJSON(outFileStream);
+// writes JSON-serialized data to SomeModel.export.json file
+[
+    {/* first model data */},
+    …
+    {/* last model data */}
+]
+```
+
+<a name="importData">
+__importData(arrayOrStream, callback)__
+
+Sometimes you need to import data from a JSON fixture.
+
+Arguments:
+
+* arrayOrStream: an array of objects or a readable stream of objects where the objects are model data.
+* callback: (optional) called when import is finished
+
+Example:
+
+```javascript
+var fixtureData = require(__dirname + '/SomeModel.export.json');
+var SomeModelFactory = require('./models/someModelFactory');
+
+SomeModelFactory.importData(fixtureData, function ()  {
+    // Stuff to do after import is complete
+});
+```
 
 ## Model Instance Methods
 

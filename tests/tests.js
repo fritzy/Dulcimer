@@ -872,9 +872,9 @@ module.exports = {
         var TM = new dulcimer.Model({
             first: {},
             last: {},
-            both: function () {
+            both: {derive: function () {
                 return this.first + ' ' + this.last;
-            }
+            }}
         }, {db: db, name: 'exportTest'});
         var receiver = new stream.Transform({objectMode: true});
         receiver._transform = function (list, x, next) {
@@ -905,15 +905,20 @@ module.exports = {
                 return this.first + ' ' + this.last;
             }}
         }, {db: db, name: 'importArrayTest'});
-        TM.importData([
+        var data = [
             {id: '00000001', first: 'John', last: 'Smith'},
             {id: '00000002', first: 'Bill', last: 'Jones'}
-        ], function (err) {
+        ];
+
+        TM.importData(data, function (err) {
             test.ok(!err, err);
             TM.all({}, function (err, list) {
                 test.ok(!err, err);
                 test.equal(list.length, 2);
-                test.equal(list[0].both, 'John Smith');
+                data.forEach(function (instance) {
+                    test.ok(['John', 'Bill'].indexOf(instance.first) !== -1);
+                    test.ok(['Smith', 'Jones'].indexOf(instance.last) !== -1);
+                });
                 test.done();
             });
         });
@@ -939,7 +944,10 @@ module.exports = {
             TM.all({}, function (err, list) {
                 test.ok(!err, err);
                 test.equal(list.length, 2);
-                test.equal(list[1].both, 'Bill Jones');
+                data.forEach(function (instance) {
+                    test.ok(['John', 'Bill'].indexOf(instance.first) !== -1);
+                    test.ok(['Smith', 'Jones'].indexOf(instance.last) !== -1);
+                });
                 test.done();
             });
         });

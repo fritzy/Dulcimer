@@ -297,6 +297,34 @@ module.exports = {
         test.equals(tm.field.format('E'), '2');
         test.done();
     },
+    "moment index": function(test) {
+        var TM = new dulcimer.Model({field: {type: 'moment', index: true}}, {db: db, name: 'moment_index'});
+        var tms = [];
+        tms.push(TM.create({field: new Date(1981, 02, 10)}));
+        tms.push(TM.create({field: new Date(1981, 02, 11)}));
+        tms.push(TM.create({field: new Date(1981, 02, 12)}));
+        tms.push(TM.create({field: new Date(1981, 02, 13)}));
+        tms.push(TM.create({field: new Date(1981, 02, 14)}));
+        tms.push(TM.create({field: new Date(1981, 02, 15)}));
+        tms.push(TM.create({field: new Date(1981, 02, 16)}));
+        var count = 0;
+        tms.forEach(function (tm) {
+            tm.save(function (err) {
+                count++;
+                if (count === tms.length) {
+                    TM.all({sortBy: 'field'}, function (err, otms) {
+                        var prev = 0;
+                        otms.forEach(function (tm) {
+                            var value = tm.field.valueOf();
+                            test.ok(value > prev);
+                            prev = value;
+                        });
+                        test.done();
+                    });
+                }
+            });
+        });
+    },
     "integer indexes": function (test) {
         var TM = new dulcimer.Model({idx: {index_int: true}, thingy: {}}, {db: db, name: 'intidx'});
         var tm = TM.create({idx: 3509835098567, thingy: 'Well hello there!'});
@@ -865,7 +893,7 @@ module.exports = {
         };
         var tm = TM.create({first: 'John', last: 'Smith'});
         tm.save(function (err) {
-            test.ok(err == null);
+            test.ifError(err);
             TM.exportJSON(receiver);
         });
     },

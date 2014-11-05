@@ -905,6 +905,7 @@ module.exports = {
                 return this.first + ' ' + this.last;
             }}
         }, {db: db, name: 'importArrayTest'});
+
         var data = [
             {id: '00000001', first: 'John', last: 'Smith'},
             {id: '00000002', first: 'Bill', last: 'Jones'}
@@ -915,9 +916,12 @@ module.exports = {
             TM.all({}, function (err, list) {
                 test.ok(!err, err);
                 test.equal(list.length, 2);
-                data.forEach(function (instance) {
-                    test.ok(['John', 'Bill'].indexOf(instance.first) !== -1);
-                    test.ok(['Smith', 'Jones'].indexOf(instance.last) !== -1);
+                data.forEach(function (datum) {
+                    test.ok(list.some(function (instance) {
+                        var firstMatch = instance.first === datum.first;
+                        var lastMatch = instance.last === datum.last;
+                        return firstMatch && lastMatch;
+                    }));
                 });
                 test.done();
             });
@@ -931,22 +935,28 @@ module.exports = {
                 return this.first + ' ' + this.last;
             }}
         }, {db: db, name: 'importArrayTest'});
+
         var data =[
             {id: '00000001', first: 'John', last: 'Smith'},
             {id: '00000002', first: 'Bill', last: 'Jones'}
         ];
+
         var readable = new stream.Readable({objectMode: true});
         readable._read = function () {
             this.push(data.shift()||null);
         };
+
         TM.importData(readable, function (err) {
             test.ok(!err, err);
             TM.all({}, function (err, list) {
                 test.ok(!err, err);
                 test.equal(list.length, 2);
-                data.forEach(function (instance) {
-                    test.ok(['John', 'Bill'].indexOf(instance.first) !== -1);
-                    test.ok(['Smith', 'Jones'].indexOf(instance.last) !== -1);
+                data.forEach(function (datum) {
+                    test.ok(list.some(function (instance) {
+                        var firstMatch = instance.first === datum.first;
+                        var lastMatch = instance.last === datum.last;
+                        return firstMatch && lastMatch;
+                    }));
                 });
                 test.done();
             });

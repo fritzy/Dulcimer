@@ -586,9 +586,9 @@ module.exports = {
         var TM = new dulcimer.Model({
             first: {},
             last: {},
-            both: function () {
+            both: {derive: function () {
                 return this.first + ' ' + this.last;
-            }
+            }}
         }, {db: db, name: 'exportTest'});
         var receiver = new stream.Transform({objectMode: true});
         receiver._transform = function (list, x, next) {

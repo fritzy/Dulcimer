@@ -6,6 +6,7 @@ var verymodel = require('verymodel');
 var dbstreams = require('../lib/streams');
 var uuid = require('uuid-v4');
 var stream = require('stream');
+var slugger = require('slugger');
 
 process.on('uncaughtException', function (err) {
     console.trace();
@@ -297,7 +298,7 @@ module.exports = {
         test.equals(tm.field.format('E'), '2');
         test.done();
     },
-    "moment index": function(test) {
+    "moment index": function (test) {
         var TM = new dulcimer.Model({field: {type: 'moment', index: true}}, {db: db, name: 'moment_index'});
         var tms = [];
         tms.push(TM.create({field: new Date(1981, 02, 10)}));
@@ -322,6 +323,29 @@ module.exports = {
                         test.done();
                     });
                 }
+            });
+        });
+    },
+    "slugger index": function (test) {
+        var TM = new dulcimer.Model({
+            name: {},
+            slug: {
+                derive: function () {
+                    return slugger(this.name);
+                },
+                index: true,
+                private: true,
+                save: true
+            },
+        },
+        {db: db, name: 'slugger_index'});
+        console.log("slugging", slugger("Nathan Fritz"));
+        var tm = TM.create({name: 'Nathan Fritz'});
+        test.equals(tm.toJSON({withPrivate: true}).slug, 'nathan-fritz');
+        tm.save(function (err) {
+            TM.findByIndex('slug', 'nathan-fritz', function (err, otm) {
+                test.notEqual(typeof(otm), "undefined");
+                test.done();
             });
         });
     },

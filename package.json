@@ -27,7 +27,8 @@
   "devDependencies": {
     "nodeunit": "0.8.1",
     "precommit-hook": "^1.0.2",
-    "jshint": "^2.5.1"
+    "jshint": "^2.5.1",
+    "slugger": "^1.0.0"
   },
   "scripts": {
     "test": "rm -rf tests/*.db && node_modules/nodeunit/bin/nodeunit tests/tests.js && rm -rf tests/*.db",

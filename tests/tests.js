@@ -951,6 +951,30 @@ module.exports = {
             });
         });
     },
+    "saveKey": function(test) {
+        var UserFactory = new dulcimer.Model({
+          firstName: {},
+          lastName: {},
+        }, {
+          name: 'user',
+          saveKey: true
+        });
+        
+        var john = UserFactory.create({
+            firstName: 'John',
+            lastName: 'Brett',
+        });
+        
+        john.save(function(err) {
+          UserFactory.all(function(err, users) {
+              users.forEach(function (user) {
+                  console.log(user.toJSON());
+                  test.ok('key' in user.toJSON());
+                  test.done();
+              });
+          });
+        });
+    },
     "Import stream": function (test) {
         var TM = new dulcimer.Model({
             first: {},

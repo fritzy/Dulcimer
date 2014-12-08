@@ -257,7 +257,7 @@ Creating a new model factory involves passing two arguments: an object describin
 
 ### Model Definitions
 
-Every root property of a model definition is a field name with an object value defining types, restrictions, and processing for a model field. In it's simplest form, a field definition can just be an empty object, and then you can assign anything to that field. If a field isn't mentioned in the defition, it won't be saved or loaded.
+Every root property of a model definition is a field name with an object value defining types, restrictions, and processing for a model field. In it's simplest form, a field definition can just be an empty object, and then you can assign anything to that field. If a field isn't mentioned in the definition, it won't be saved or loaded.
 
 <a name="getModel"></a>
 ### Referring to Other Models
@@ -481,7 +481,7 @@ new dulcimer.Model({
 __foreignCollection__
 
 `foreignCollection`'s are like `foreignKey`'s except they are of an array type.
-Values are saved as an array of key strings, and expanded out by when the model is retrieved with `get` up to the default depth of 5 or overriden with `{depth: 24}` on the `get` command.
+Values are saved as an array of key strings, and expanded out by when the model is retrieved with `get` up to the default depth of 5 or overridden with `{depth: 24}` on the `get` command.
 
 When assigning values to these fields, you may either assign an array of model instances or an array of key strings.
 
@@ -523,7 +523,7 @@ new dulcimer.Model({
 __default__
 
 `default` may be a value or a function. Default is only brought into play when a field is `required` but not assigned.
-In function form, `default` behaves similiarly to `derive`, except that it only executes once.
+In function form, `default` behaves similarly to `derive`, except that it only executes once.
 
 ```js
 new dulcimer.Model({
@@ -590,7 +590,7 @@ Requirements:
 __Note__: Multiple models can and should use the same bucket.
 Multiple models SHOULD NOT use the same name.
 
-Buckets are useful for seperating groups of data by access groups or other things.
+Buckets are useful for separating groups of data by access groups or other things.
 
 
 Index:
@@ -792,7 +792,7 @@ __offset__
 
 This skips `offset` number of entries in a read call.
 
-:heavy\_exclamation\_mark: This is depricated (and potentially very resource intensive). Use [continuation](#op-continuation) tokens instead.
+:heavy\_exclamation\_mark: This is deprecated (and potentially very resource intensive). Use [continuation](#op-continuation) tokens instead.
 
 ----
 
@@ -883,7 +883,7 @@ __depth__
 <a name='op-ctx'></a>
 __ctx__
 
-Whater you assign to `ctx` will be passed to the resulting [onSave](#mo-onSave) or [onDelete](#onDelete) callbacks.
+Whatever you assign to `ctx` will be passed to the resulting [onSave](#mo-onSave) or [onDelete](#onDelete) callbacks.
 
 Useful for passing the user and other context from an HTTP API call to the model callbacks, and many other similar use cases.
 
@@ -1088,7 +1088,7 @@ Arguments:
 
 CallBack Arguments:
 
-1. __err__: Only set if an error occured during wipe.
+1. __err__: Only set if an error occurred during wipe.
 
 Options:
 
@@ -1247,7 +1247,7 @@ Person.getTotal(function (err, count) {
 __runWithLock(callback)__
 
 Node.js is not threaded, but it is asynchronous. This can make database access in keystores hazardous.
-The issue requires you to understand some subleties about the event stack.
+The issue requires you to understand some subtleties about the event stack.
 Anytime you're updating a value based on get(s), you should lock around these operations to prevent the operation from changing under you.
 
 An incrementer is a good example.
@@ -1256,7 +1256,7 @@ But what if, when the process goes back to the event loop when you call save, an
 Now that value is lost.
 
 Duclimer keeps an internal lock for writes that `runWithLock` that runWithLock acquires for you to solve problems like this.
-runWithLock queus other locking calls until you `unlock()`
+runWithLock queues other locking calls until you `unlock()`
 
 :heavy\_exclamation\_mark: Within a locked function, anytime you call [save](#save) or [delete](#delete) use the option `withoutLock` set to `true`. You need to do this because you already have a write lock. This is the **ONLY** time you should do so.
 
@@ -1372,7 +1372,7 @@ Arguments:
 
 Callback Arguments:
 
-1. __err__: Only set if an error occured.
+1. __err__: Only set if an error occurred.
 
 Options:
 
@@ -1414,7 +1414,7 @@ Arguments:
 
 Callback Arguments:
 
-1. __err__: Only set when an error has occured while deleting.
+1. __err__: Only set when an error has occurred while deleting.
 
 Options:
 

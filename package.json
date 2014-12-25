@@ -11,7 +11,7 @@
     "validator": "~2.1.0",
     "underscore": "^1.6.0",
     "verymodel": "^1.10.1",
-    "async": "~0.2.10",
+    "async": "^0.2.10",
     "base60": "0.0.1",
     "padlock": "~1.1.2",
     "leveldown": "^0.10.2",
@@ -28,7 +28,8 @@
     "nodeunit": "0.8.1",
     "precommit-hook": "^1.0.2",
     "jshint": "^2.5.1",
-    "slugger": "^1.0.0"
+    "slugger": "^1.0.0",
+    "async": "^0.2.10"
   },
   "scripts": {
     "test": "rm -rf tests/*.db && node_modules/nodeunit/bin/nodeunit tests/tests.js && rm -rf tests/*.db",

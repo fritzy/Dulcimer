@@ -292,6 +292,17 @@ module.exports = {
             });
         });
     },
+    "saveKey": function (test) {
+        var TM = new dulcimer.Model({field: {}}, {db: db, name: 'saveKey', saveKey: true});
+        var tm = TM.create({field: 'howdy'});
+        tm.save(function (err) {
+            TM.get(tm.key, function (err, tm2) {
+                var out = tm2.toJSON();
+                test.ok(out.hasOwnProperty('key'));
+                test.done();
+            });
+        });
+    },
     "moment type": function (test) {
         var TM = new dulcimer.Model({field: {type: 'moment'}}, {db: db, name: 'moment_type'});
         var tm = TM.create({field: new Date(1981, 02, 10)});
@@ -339,7 +350,6 @@ module.exports = {
             },
         },
         {db: db, name: 'slugger_index'});
-        console.log("slugging", slugger("Nathan Fritz"));
         var tm = TM.create({name: 'Nathan Fritz'});
         test.equals(tm.toJSON({withPrivate: true}).slug, 'nathan-fritz');
         tm.save(function (err) {

@@ -78,6 +78,10 @@ function makeModelLevely(mf) {
         },
     });
 
+    if (mf.options.saveKey) {
+        mf.definition.key.private = false;
+    }
+
     mf.getModel = getModel;
 
     mf.handleOpts = function (name, opts, callback) {

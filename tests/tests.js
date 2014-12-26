@@ -495,7 +495,7 @@ module.exports = {
     },
     "Collection Test": function (test) {
         var SM = new dulcimer.Model({name: {}}, {db: db, name: 'submodelcol'});
-        var PM = new dulcimer.Model({name: {}, stuff: {foreignCollection: SM}}, {db: db, name: 'parentmodelcol'});
+        var PM = new dulcimer.Model({name: {}, stuff: {foreignCollection: 'submodelcol'}}, {db: db, name: 'parentmodelcol'});
         var sm = SM.create({bucket: 'hi', name: 'derp'});
         sm.save({bucket: 'hi'}, function (err) {
             var  sm2 = SM.create({name: 'lerp'});

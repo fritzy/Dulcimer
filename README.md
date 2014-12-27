@@ -147,6 +147,8 @@ nathan.save(function (err) {
     * <del>[getChildren](#getChildren)</del>
     * <del>[getChildrenByIndex](#getChildrenByIndex)</del>
     * <del>[findChildByIndex](#findChildByIndex)</del>
+    * [hasKey](#hasKey)
+    * [hasInstance](#hasInstance)
     * [toJSON](#toJSON)
     * [toString](#toString)
     * [diff](#diff)
@@ -1345,6 +1347,8 @@ SomeModelFactory.importData(fixtureData, function ()  {
 * <del>[getChildren](#getChildren)</del>
 * <del>[getChildrenByIndex](#getChildrenByIndex)</del>
 * <del>[findChildByIndex](#findChildByIndex)</del>
+* [hasKey](#hasKey)
+* [hasInstance](#hasInstance)
 * [toJSON](#toJSON)
 * [toString](#toString)
 * [diff](#diff)
@@ -1780,6 +1784,32 @@ person.findChildByIndex(Version, 'created', person.created, function (err, versi
     //ok, this one is a bit contrived
 });
 ```
+
+----
+
+<a name="hasKey"></a>
+
+Check whether an instance field has a foreign key referenced.
+
+Arguments:
+
+* fieldName
+* key
+
+Returns: true/false
+
+----
+
+<a name="hasInstance"></a>
+
+Similar to [hasKey](#hasKey), it checks to see whether an instance is referenced in a foreign or foreignCollection field.
+
+Arguments:
+
+* fieldName
+* otherModelInstance
+
+Returns: true/false
 
 ----
 

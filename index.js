@@ -6,6 +6,7 @@ var importexport = require ('./lib/importexport');
 var base       = require('./lib/base');
 var children   = require('./lib/children');
 var foreign    = require('./lib/foreign');
+var extensions = require('./lib/extensions');
 var uuid       = require('uuid-v4');
 var LevelDulcimer = require('level-dulcimer');
 var RiakDulcimer = require('riak-dulcimer');
@@ -118,7 +119,8 @@ function makeModelLevely(mf) {
     children(mf);
     foreign(mf);
     importexport(mf);
-    
+    extensions(mf);
+
     return mf;
 }
 
@@ -131,7 +133,7 @@ VeryLevelModel.prototype = Object.create(verymodel.VeryModel.prototype);
 
 module.exports = {
     Model: VeryLevelModel,
-    
+
     connect: function (opts) {
         if (typeof opts === 'string') {
             opts = {path: opts, type: 'level'};

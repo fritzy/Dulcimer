@@ -505,6 +505,7 @@ module.exports = {
                     PM.load(pm.key, {bucket: 'hi'}, function (err, pm2) {
                         test.ok(pm2.stuff[0].name === 'derp');
                         test.ok(pm2.stuff[1].name === 'lerp');
+                        test.ok(pm2.hasInstance('stuff', sm));
                         PM.all({depth: 2, bucket: 'hi'}, function (err, pms) {
                             test.done();
                         });

@@ -1754,6 +1754,7 @@ person.getChildrenByIndex(Comment, 'date', '2014-02-10', function (err, comments
 ----
 
 <a name="findChildByIndex"></a>
+__findChildByIndex(ModelFactory, field, value, options, callback)__
 
 Similar to [getChildrenByIndex](#getChildrenByIndex) except that it only returns one result.
 
@@ -1788,6 +1789,7 @@ person.findChildByIndex(Version, 'created', person.created, function (err, versi
 ----
 
 <a name="hasKey"></a>
+__hasKey(fieldName, key)__
 
 Check whether an instance field has a foreign key referenced.
 
@@ -1799,6 +1801,7 @@ Arguments:
 Returns: true/false
 
 ----
+__hasInstance(fieldName, otherModelInstance)__
 
 <a name="hasInstance"></a>
 

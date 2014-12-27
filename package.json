@@ -22,14 +22,14 @@
     "optimist": "^0.6.1",
     "level-dulcimer": "2.0.3",
     "riak-dulcimer": "1.0.2",
-    "moment": "^2.8.3"
+    "moment": "^2.8.3",
+    "async": "^0.2.10"
   },
   "devDependencies": {
     "nodeunit": "0.8.1",
     "precommit-hook": "^1.0.2",
     "jshint": "^2.5.1",
-    "slugger": "^1.0.0",
-    "async": "^0.2.10"
+    "slugger": "^1.0.0"
   },
   "scripts": {
     "test": "rm -rf tests/*.db && node_modules/nodeunit/bin/nodeunit tests/tests.js && rm -rf tests/*.db",

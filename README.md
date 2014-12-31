@@ -141,6 +141,7 @@ nathan.save(function (err) {
     * [addForeign](#addForeign)
     * [removeForeign](#removeForeign)
     * [getForeign](#getForeign)
+    * [hasForeign](#hasForeign)
     * [getReverseForeign](#getReverseForeign)
     * <del>[createChild](#createChild)</del>
     * <del>[getChild](#getChild)</del>
@@ -466,6 +467,7 @@ To manipulate and load foreign relationships, use the following methods:
 * [addForeign](#addForeign)
 * [removeForeign](#removeForeign)
 * [getForeign](#getForeign)
+* [hasForeign](#hasForeign)
 * [getReverseForeign](#getReverseForeign)
 
 Example:
@@ -1341,6 +1343,7 @@ SomeModelFactory.importData(fixtureData, function ()  {
 * [addForeign](#addForeign)
 * [removeForeign](#removeForeign)
 * [getForeign](#getForeign)
+* [hasForeign](#hasForeign)
 * [getReverseForeign](#getReverseForeign)
 * <del>[createChild](#createChild)</del>
 * <del>[getChild](#getChild)</del>
@@ -1557,6 +1560,37 @@ blogPost.getForeign('contributors', {limit: 10}, function (err, users, page) {
     }
 });
 ```
+
+----
+
+<a name="hasForeign"></a>
+__hasForeign(field, foreignKey, options, callback)__
+
+Retrieves the model instances from foreign relationships of the field.
+
+Arguments:
+
+* field: field with foreignKeys
+* foreignKey: foreign key or model instance
+* options
+* callback `function (err, has)`
+
+Callback Arguments:
+
+1. __err__: If err is set, there has been an error getting result.
+2. __has__: boolean of whether the foreign key is linked in that field
+
+Options:
+
+* [db](#op-db)
+* [bucket](#op-bucket)
+* <del>[offset](#op-offset)</del>
+* [continuation](#op-continuation)
+* [limit](#op-limit)
+* [reverse](#op-reverse)
+* [filter](#op-filter)
+* [depth](#op-depth)
+* [returnStream](#op-returnStream)
 
 ----
 

@@ -788,6 +788,12 @@ module.exports = {
                 test.ok(Array.isArray(ftms));
                 test.equals(ftms.length, 2);
                 test.equals(page.total, 2);
+                hasFK();
+            });
+        }
+        function hasFK() {
+            tm.hasForeign('messages', ftm1.key, function (err, has) {
+                test.ok(has);
                 getReverse();
             });
         }
@@ -831,7 +837,20 @@ module.exports = {
                 test.ok(Array.isArray(ftms));
                 test.equals(ftms.length, 0);
                 test.equals(page.total, 0);
-                test.done();
+                removeOne();
+            });
+        }
+        function removeOne() {
+            tm.hasForeign('messages', ftm2.key, function (err, has) {
+                test.ifError(err);
+                test.ok(has);
+                tm.removeForeign('messages', ftm2.key, function (err) {
+                    test.ifError(err);
+                    tm.hasForeign('messages', ftm2.key, function (err, has) {
+                        test.equal(has, false);
+                        test.done();
+                    });
+                });
             });
         }
         tmSave();

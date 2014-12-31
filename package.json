@@ -20,8 +20,8 @@
     "uuid-v4": "^0.1.0",
     "JSONStream": "^0.8.4",
     "optimist": "^0.6.1",
-    "level-dulcimer": "2.1.1",
-    "riak-dulcimer": "1.1.0",
+    "level-dulcimer": "2.1.2",
+    "riak-dulcimer": "1.1.1",
     "moment": "^2.8.3"
   },
   "devDependencies": {

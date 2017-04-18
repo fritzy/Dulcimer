@@ -1,4 +1,4 @@
-#Dulcimer
+# Dulcimer
 
 Dulcimer is an ORM for an embedded keystore in your Node.js app.
 The aim is to provide a consistent way of working with keystores that enables enjoyable development.

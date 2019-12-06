@@ -1,5 +1,7 @@
 # Dulcimer
 
+_This project is deprecated and is left intact for history._ -[@fritzy](https://github.com/fritzy)
+
 Dulcimer is an ORM for an embedded keystore in your Node.js app.
 The aim is to provide a consistent way of working with keystores that enables enjoyable development.
 
